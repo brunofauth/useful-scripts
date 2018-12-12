@@ -9,7 +9,7 @@ import fire
 YOUTUBE_API = r"https://www.googleapis.com/youtube/v3/search"
 YOUTUBE_GUI = r"https://www.youtube.com/watch"
 
-def search(query, api_key="AIzaSyC1kkAql9FQLq8lyETMCu29scm3bsbuHUg"):
+def search(query, api_key):
     query_data = {"part": "id", "q": query, "key": api_key, "type": "video"}
     response = requests.get(YOUTUBE_API, params=query_data)
     try:
