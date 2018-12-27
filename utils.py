@@ -1,5 +1,6 @@
 import contextlib
 import functools
+import threading
 import requests
 import inspect
 import pprint
@@ -40,3 +41,26 @@ def dlfile(url: str, output: str=None, chunk_size: int=1024 * 1024) -> None:
             raise RuntimeError(f"Download request returned code {req.status_code}.")
         for chunk in req.iter_content(chunk_size):
             file.write(chunk)
+
+
+def thread(autostart=True, name=None, daemon=None):
+    '''Decorator for making new thread when calling function.'''
+    def _func(func):
+        def _args(*args, **kwargs):
+            t = threading.Thread(target=func, args=args,
+                kwargs=kwargs, name=name, daemon=daemon)
+            if autostart:
+                t.start()
+            return t
+        return _args
+    return _func
+
+
+def first(iter, func=bool):
+    '''Returns the first element from iter that returns True.'''
+    for item in iter:
+        if func(item):
+            return item
+    raise ValueError("No such item.")
+
+
