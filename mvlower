@@ -7,7 +7,9 @@ import os
 
 if __name__ == "__main__":
     for path in sys.argv[1:]:
-        lower = path.lower()
+        dir, file = os.path.split(path)
+        lower = os.path.join(dir, file.lower())
         if os.path.exists(lower):
-            print(f"Path '{lower}' already exists.", file=sys.stderr)
+            print(f"Path '{lower}' already exists, skipping.", file=sys.stderr)
         os.system(f"mv {path} {lower}")
+
