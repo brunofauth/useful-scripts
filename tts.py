@@ -1,9 +1,15 @@
-from win32com.client import Dispatch
-from fire import Fire
+import fire
+import sys
+import os
+
 
 def speak(text):
-    speaker = Dispatch("SAPI.SpVoice")
-    speaker.Speak(text)
+    if sys.platform == "win32":
+        import win32com.client
+        win32com.client.Dispatch("SAPI.SpVoice").speak(text)
+    else:
+        os.system("espeak '{text}'")
+
 
 if __name__ == "__main__":
-    Fire(speak)
+    fire.Fire(speak)

@@ -3,18 +3,22 @@ import json
 import fire
 import re
 
+
+PHONE_PATTERN = re.compile(r"[0-9]{8,9}")
 TOTALVOICE = "https://api.totalvoice.com.br/composto"
 GEMIDAO = 'https://github.com/haskellcamargo/gemidao-do-zap/raw/master/resources/gemidao.mp3'
 
-def gemer(token: str, source: str, destination: str) -> None:
-    if not re.match(r"^[a-f0-9]{32}$", token):
-        raise ValueError("Invalid Token. Get one on https://totalvoice.com.br")
-    if len(re.findall(r"[0-9]{10,11}", f"{source} {destination}")) < 2:
-        raise ValueError('Um ou mais dos números de telefone é inválido')
+
+def gemer(token: str, src_phone: str, dst_phone: str) -> None:
+    if not re.match(PHONE_PATTERN, src_phone):
+        raise ValueError(f"Invalid 'src_phone' '{src_phone}'.")
+    if not re.match(PHONE_PATTERN, dst_phone):
+        raise ValueError(f"Invalid 'dst_phone' '{dst_phone}'.")
         
     headers = {'Access-Token': token, 'Accept': 'application/json',
                'Content-Type': 'application/json'}
-    payload = {"numero_destino": destination, "bina": source,
+
+    payload = {"numero_destino": dst_phone, "bina": src_phone,
                "dados": [{"acao": 'audio', "acao_dados": {"url_audio": GEMIDAO}}]}
     
     resp = requests.post(TOTALVOICE, data=json.dumps(payload), headers=headers).json()
@@ -22,5 +26,6 @@ def gemer(token: str, source: str, destination: str) -> None:
         raise RuntimeError(f"{resp['mensagem']}")
     print("Gemidão enviado com sucesso!")
 
+
 if __name__ == "__main__":
-    fire.Fire(lambda src, dst: gemer("1bfb98b07e60d3c89de7c1f835393ac7", src, dst))
+    fire.Fire(gemer)
