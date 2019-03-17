@@ -25,6 +25,7 @@ def cmt2dict(cmt):
         "type": "Comment",
         "author": getattr(cmt.author, "name", "[removed/deleted]"),
         "link": "http://reddit.com" + cmt.permalink,
+        "subreddit": cmt.submission.subreddit_name_prefixed,
         "html": cmt.body_html
     }
 
