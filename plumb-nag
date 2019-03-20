@@ -1,0 +1,10 @@
+if [ -n $(pgrep i3-nagbar) ]; then
+    pkill i3-nagbar
+fi
+
+
+[ -z $(xclip -o) ] && exit
+
+
+i3-nagbar -m "$(xclip -o)" &
+echo -n | xclip -selection primary
