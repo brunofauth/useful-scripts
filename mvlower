@@ -1,15 +1,22 @@
 #! /usr/bin/env python
 
 
+import fire
 import sys
 import os
 
 
-if __name__ == "__main__":
-    for path in sys.argv[1:]:
-        dir, file = os.path.split(path)
-        lower = os.path.join(dir, file.lower())
-        if os.path.exists(lower):
-            print(f"Path '{lower}' already exists, skipping.", file=sys.stderr)
+def main(*files):
+    for file in files:
+        dir, base = os.path.split(path)
+        name = os.path.join(dir, base.lower().replace(" ", "-"))
+
+        if os.path.exists(name):
+            print(f"'{name}' exists, skipping.", file=sys.stderr)
+
         os.system(f"mv {path} {lower}")
+
+
+if __name__ == "__main__":
+    fire.Fire(main)
 
