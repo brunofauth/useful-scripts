@@ -2,6 +2,6 @@
 
 
 file=$(du -a $@ | awk '{$1="";print}' | rofi -dmenu)
-if [[ -n $file ]]; then
-    $EDITOR $file
+if [[ -n "$file" ]]; then
+    $EDITOR "$file"
 fi
