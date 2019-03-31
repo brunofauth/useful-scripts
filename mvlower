@@ -14,7 +14,7 @@ def main(*files):
         if os.path.exists(name):
             print(f"'{name}' exists, skipping.", file=sys.stderr)
 
-        os.system(f"mv {path} {lower}")
+        os.system(f"mv {file} {name}")
 
 
 if __name__ == "__main__":
