@@ -1,0 +1,14 @@
+#! /bin/sh
+
+cd "$HOME"/Videos
+
+url=$(xclip -selection clipboard -o)
+
+notify-send "Commencing video download." "$url" -t 5000
+youtube-dl "$url"
+
+if [ $? == 0 ]; then
+    notify-send "Download has finished!" -t 5000
+else
+    notify-send "Error on download!" -t 5000
+fi
