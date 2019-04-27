@@ -1,0 +1,8 @@
+#! /bin/sh
+
+prefix="$HOME/materiais-vetes"
+IFS=$'\n'
+for chosen in $(find "$prefix" -type f | sed -E "s|^$prefix/(.+)\$|\1|" | fzf -e -i -m); do
+    echo -n "$prefix/$chosen" | xargs -r -d '\n' xdg-open & >/dev/null
+done
+

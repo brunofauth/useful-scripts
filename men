@@ -1,0 +1,3 @@
+#! /bin/sh
+
+man -k . | fzf -e -i | xargs -r man
