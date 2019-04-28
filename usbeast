@@ -1,0 +1,46 @@
+#! /bin/sh
+
+if [ -t 1 ]; then
+    in_terminal=true
+fi
+
+choose() {
+    choices=$(xargs -r -I "{}" echo "{}")
+    if [ "$in_terminal" = true ]; then
+        echo "$choices" | fzf -e -i --prompt="$1 "
+    else
+        echo "$choices" | rofi -dmenu -i -p "$1"
+    fi
+}
+
+if [ "$1" = "-m" ]; then
+    parts=$(lsblk -lp | grep "part $" | awk '{print $1 " ("$4")"}')
+    [ -z "$parts" ] && exit
+
+    chosen=$(echo "$parts" | choose "What to mount?" | awk '{print $1}')
+    [ -z "$chosen" ] && exit
+
+    mountd=$(find /mnt "$HOME" -maxdepth 1 -type d | choose "Where to mount?")
+    [ -z "$mountd" ] && exit
+
+    if [ -t 1 ]; then
+        sudo mount "$chosen" "$mountd"
+    else
+        gksu mount "$chosen" "$mountd"
+    fi
+
+elif [ "$1" = "-u" ]; then
+    parts=$(lsblk -lp | grep "part ." | awk '{print $7" ("$1")"}' | sort)
+    [ -z "$parts" ] && exit
+
+    chosen=$(echo "$parts" | choose "What to unmount?" | awk '{print $1}')
+    [ -z "$chosen" ] && exit
+    
+    if [ -t 1 ]; then
+        sudo umount "$chosen"
+    else
+        gksu umount "$chosen"
+    fi
+else
+    echo "Usage: usbeast < -m | -u >"
+fi
