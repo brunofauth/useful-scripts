@@ -42,5 +42,5 @@ elif [ "$1" = "-u" ]; then
         gksu umount "$chosen"
     fi
 else
-    echo "Usage: usbeast < -m | -u >"
+    echo "Usage: usbeast < -m | -u > (mount or unmount)"
 fi
