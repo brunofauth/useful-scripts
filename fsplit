@@ -1,0 +1,25 @@
+#! /usr/bin/env python3
+
+
+import fire
+import re
+import os
+
+
+def main(regex, big_file, prefix="", suffix=""):
+    pattern = re.compile(regex)
+    index = 0
+    with open(big_file) as src:
+        lines = []
+        for line in src:
+            if pattern.match(line):
+                with open(f"{prefix}{index}{suffix}", "w") as dst:
+                    dst.writelines(lines)
+                lines = [line]
+                index += 1
+            else:
+                lines.append(line)
+
+
+if __name__ == "__main__":
+    fire.Fire(main)
