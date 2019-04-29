@@ -19,6 +19,9 @@ def main(regex, big_file, prefix="", suffix=""):
                 index += 1
             else:
                 lines.append(line)
+        with open(f"{prefix}{index}{suffix}", "w") as dst:
+            dst.writelines(lines)
+
 
 
 if __name__ == "__main__":
