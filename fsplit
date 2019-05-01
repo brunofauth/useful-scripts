@@ -6,21 +6,24 @@ import re
 import os
 
 
-def main(regex, big_file, prefix="", suffix=""):
+def iter_segments(fd, regex):
     pattern = re.compile(regex)
-    index = 0
+    lines = []
+    for line in fd:
+        if not pattern.match(line):
+            lines.append(line)
+        else:
+            yield lines
+            lines = [line]
+    yield lines
+
+
+
+def main(regex, big_file, prefix="", suffix=""):
     with open(big_file) as src:
-        lines = []
-        for line in src:
-            if pattern.match(line):
-                with open(f"{prefix}{index}{suffix}", "w") as dst:
-                    dst.writelines(lines)
-                lines = [line]
-                index += 1
-            else:
-                lines.append(line)
-        with open(f"{prefix}{index}{suffix}", "w") as dst:
-            dst.writelines(lines)
+        for i, lines in enumerate(iter_segments(src, regex)):
+            with open(f"{prefix}{i}{suffix}", "w") as dst:
+                dst.writelines(lines)
 
 
 

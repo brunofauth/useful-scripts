@@ -2,7 +2,8 @@ import wikipedia as wiki
 
 from textwrap import fill
 from pprint import pformat
-from fire import Fire
+import fire
+
 
 def search_wikipedia(query, lang="en"):
     if lang not in wiki.languages():
@@ -19,5 +20,6 @@ def search_wikipedia(query, lang="en"):
         raise ValueError("Invalid article identifier.")
     print("\n" + fill(wiki.summary(results[choice]).strip("\n")))
 
+
 if __name__ == "__main__":
-    Fire(search_wikipedia)
+    fire.Fire(search_wikipedia)
