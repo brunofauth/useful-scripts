@@ -45,7 +45,8 @@ def main(client_id, client_secret, user_agent, name=None, output=None):
             username=(name or input("Username: ")),
             password=getpass.getpass()
         ).user.me().saved(limit=1000)
-    
+
+    print("Finished downloading entries. Converting...", file=sys.stderr)
     data = [CONVERTERS[type(s)](s) for s in raw_saved]
     print(f"Serealizing {len(data)} items...", file=sys.stderr)
     
