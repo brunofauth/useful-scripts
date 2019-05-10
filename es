@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /usr/bin/env sh
 
 
 if [ -t 1 ]; then
@@ -16,7 +16,7 @@ choose() {
 }
 
 
-scripts=$(find "$HOME/useful-scripts" -type f | grep -ve .git)
+scripts=$(find "$SCRIPTS" -type f | grep -ve .git)
 file=$(echo "$scripts" | choose "What to edit?")
 
 
