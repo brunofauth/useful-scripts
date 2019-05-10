@@ -1,0 +1,10 @@
+#! /bin/sh
+
+
+pkill pulseaudio
+pkill volumeicon
+
+
+pulseaudio &
+sleep 10
+volumeicon &

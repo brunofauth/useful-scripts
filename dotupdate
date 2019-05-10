@@ -1,0 +1,36 @@
+#! /usr/bin/env sh
+
+
+cd "$HOME/Dotfiles/general"
+
+for prog in "$@"; do
+    case "$prog" in
+        i3)
+            cp -f .config/i3/ "$XDG_CONFIG_HOME"
+            echo "Updated i3wm config"
+            ;;
+        rofi)
+            cp -rf .config/rofi "$XDG_CONFIG_HOME"
+            echo "Updated rofi config"
+            ;;
+        fish)
+            cp -rf .config/fish "$XDG_CONFIG_HOME"
+            echo "Updated fish config"
+            ;;
+        bash)
+            cp .bashrc "$HOME"
+            echo "Updated bashrc."
+            ;;
+        polybar)
+            cp -rf .config/polybar "$XDG_CONFIG_HOME"
+            echo "Updated polybar config"
+            ;;
+        -h)
+            echo "i3 rofi fish bash polybar"
+            ;;
+        *)
+            echo "Unknow option $prog. run dotupdate -l to list valid args"
+            ;;
+    esac
+done
+
