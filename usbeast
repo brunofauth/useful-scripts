@@ -1,8 +1,14 @@
 #! /bin/sh
 
+
+ICON_ERR=/usr/share/icons/Papirus/32x32/status/dialog-error.svg
+ICON_HDD=/usr/share/icons/Papirus/32x32/devices/drive-harddisk.svg
+
+
 if [ -t 1 ]; then
     in_terminal=true
 fi
+
 
 choose() {
     choices=$(xargs -r -I "{}" echo "{}")
@@ -13,34 +19,39 @@ choose() {
     fi
 }
 
+
 if [ "$1" = "-m" ]; then
     parts=$(lsblk -lp | grep "part $" | awk '{print $1 " ("$4")"}')
     [ -z "$parts" ] && exit
 
     chosen=$(echo "$parts" | choose "What to mount?" | awk '{print $1}')
     [ -z "$chosen" ] && exit
-
-    mountd=$(find /mnt "$HOME" -maxdepth 1 -type d | choose "Where to mount?")
-    [ -z "$mountd" ] && exit
-
-    if [ -t 1 ]; then
-        sudo mount "$chosen" "$mountd"
-    else
-        gksu mount "$chosen" "$mountd"
-    fi
+    
+    msg=$(udisksctl mount -b "$chosen")
+    ret=$?
+    echo -n $msg | sed -r "s|^Mounted $chosen at (.+)\.$|\1|" | xclip -selection clipboard
 
 elif [ "$1" = "-u" ]; then
-    parts=$(lsblk -lp | grep "part ." | awk '{print $7" ("$1")"}' | sort)
+    parts=$(lsblk -lp | grep "part ." | awk '{print $1" ("$7")"}')
     [ -z "$parts" ] && exit
 
     chosen=$(echo "$parts" | choose "What to unmount?" | awk '{print $1}')
     [ -z "$chosen" ] && exit
+
+    msg=$(udisksctl unmount -b "$chosen")
+    ret=$?
     
-    if [ -t 1 ]; then
-        sudo umount "$chosen"
+else
+    echo "Usage: usbeast < -m | -u > (mount or unmount)" && exit 1
+fi
+
+
+if [ ! -t 1 ]; then
+    if [ $ret -eq 0 ]; then
+        notify-send -t 3000 -i "$ICON_HDD" "$msg"
     else
-        gksu umount "$chosen"
+        notify-send -t 3000 -i "$ICON_ERR" "$msg"
     fi
 else
-    echo "Usage: usbeast < -m | -u > (mount or unmount)"
+    echo "$msg"
 fi
