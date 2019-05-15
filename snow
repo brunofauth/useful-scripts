@@ -1,0 +1,8 @@
+#! /usr/bin/env sh
+
+
+IFS=$'\n'
+
+for file in $(find "$1" -type f | fzf -e -i -m); do
+    xdg-open "$file" &
+done
