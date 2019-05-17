@@ -1,7 +1,7 @@
 #! /usr/bin/env sh
 
 
-difference=$(sdiff -l $1 $2 | cat -n | grep -v -e '($')
+difference=$(sdiff -l "$1" "$2" | cat -n | grep -v -e '($')
 
 if [ -n "$difference" ]; then
     echo "$difference" | less
