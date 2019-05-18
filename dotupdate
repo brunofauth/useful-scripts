@@ -24,6 +24,9 @@ for prog in "$@"; do
         polybar)
             cp -rf .config/polybar "$XDG_CONFIG_HOME"
             echo "Updated polybar config"
+        profile)
+            cp .profile "$HOME"
+            echo "Updated profile."
             ;;
         -h)
             echo "i3 rofi fish bash polybar"
