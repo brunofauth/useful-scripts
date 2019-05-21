@@ -1,0 +1,17 @@
+#! /usr/bin/env sh
+
+
+if [ -n "$1" ]; then
+    emoji_file="$1"
+else
+    emoji_file="$HOME/.local/share/emoji"
+fi
+
+
+chosen=$(cat "$emoji_file" | rofi -dmenu -i -p "Pick an emoji")
+[ -z "$chosen" ] && exit
+
+
+emoji=$(echo "$chosen" | awk '{print $1}')
+echo -n "$emoji" | xclip -selection clipboard
+notify-send "Copied '$emoji' into the clipboard."
