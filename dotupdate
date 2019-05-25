@@ -9,6 +9,10 @@ for prog in "$@"; do
             cp -f .config/i3/ "$XDG_CONFIG_HOME"
             echo "Updated i3wm config"
             ;;
+        vim)
+            cp -rf .vim "$HOME"
+            echo "Updated vim."
+            ;;
         rofi)
             cp -rf .config/rofi "$XDG_CONFIG_HOME"
             echo "Updated rofi config"
@@ -24,6 +28,7 @@ for prog in "$@"; do
         polybar)
             cp -rf .config/polybar "$XDG_CONFIG_HOME"
             echo "Updated polybar config"
+            ;;
         profile)
             cp .profile "$HOME"
             echo "Updated profile."
