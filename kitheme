@@ -3,4 +3,4 @@
 
 cd "$XDG_CONFIG_HOME/kitty/themes"
 
-ls | rofi -dmenu -i -p "Pick a theme" | xargs -r kitty @ set-colors
+ls | rofi -dmenu -i -p "Pick a theme" | xargs -r kitty @ set-colors -a

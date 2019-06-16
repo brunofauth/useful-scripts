@@ -1,8 +1,14 @@
 #! /usr/bin/env sh
 
-prefix="$HOME/materiais-vetes"
+prefix="$HOME/materiais-vetes/"
 IFS=$'\n'
-for chosen in $(find "$prefix" -type f | sed -E "s|^$prefix/(.+)\$|\1|" | fzf -e -i -m); do
-    echo -n "$prefix/$chosen" | xargs -r -d '\n' xdg-open & >/dev/null
+lolo=$(find "$prefix" -type f | sed -E "s|^$prefix||" | fzf -e -i -m +s)
+echo "$lolo"
+for chosen in "$lolo"; do
+    echo "$chosen"
+    if [ -n "$chosen" ]; then
+        echo "$chosen"
+        xdg-open "$prefix/$chosen" >/dev/null 2>&1 &
+    fi
 done
 
