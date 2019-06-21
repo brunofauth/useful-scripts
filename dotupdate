@@ -17,6 +17,7 @@ for prog in "$@"; do
         laptopdiff)
             diff -u .config/i3/config  "$XDG_CONFIG_HOME/i3/config" > .config/i3/laptop.diff
             echo "Updated i3wm laptop.diff"
+            ;;
         vim)
             cp -rf .vim "$HOME"
             echo "Updated vim."
