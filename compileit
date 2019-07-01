@@ -1,0 +1,27 @@
+#! /usr/bin/env sh
+
+for file in "$@"; do
+    case "$(mimetype -b "$file")" in
+        text/x-python)
+            python "$file"
+            ;;
+        text/x-python2)
+            python2 "$file"
+            ;;
+        text/x-python3)
+            python3 "$file"
+            ;;
+        application/x-shellscript)
+            sh "$file"
+            ;;
+        text/x-tex)
+            pdflatex "$file"
+            ;;
+        text/markdown)
+            pandoc "$file" -o "${file%.*}.pdf"
+            ;;
+        *)
+            >&2 echo "No case for files like $file"
+            ;;
+    esac
+done
