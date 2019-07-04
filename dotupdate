@@ -39,11 +39,15 @@ for prog in "$@"; do
             echo "Updated polybar config"
             ;;
         profile)
-            cp .profile "$HOME"
+            cp -f .profile "$HOME"
             echo "Updated profile."
             ;;
+        sxiv)
+            cp -rf .config/sxiv  "$XDG_CONFIG_HOME"
+            echo "Updated sxiv."
+            ;;
         -h)
-            echo "i3 rofi fish bash polybar"
+            echo "i3 rofi fish bash polybar sxiv profile i3laptop laptopdiff"
             ;;
         *)
             echo "Unknow option $prog. run dotupdate -l to list valid args"
