@@ -1,8 +1,24 @@
 #! /usr/bin/env sh
 
-find "$HOME/materiais-vetes/" -type f -print0 \
+if [ -d "$2" ]; then
+    MED_DIR="$2"
+else
+    MED_DIR="$HOME/Medicina"
+fi
+
+if [ -n "$1" ]; then
+    case "$1" in
+        -h) echo "Usage: $0 SUBDIR DIR" && exit ;;
+        -l) MED_DIR="$MED_DIR/livros" ;;
+        -[1-9]) MED_DIR="$MED_DIR/nivel$1" ;;
+        -1[0-2]) MED_DIR="$MED_DIR/nivel$1" ;;
+        *) >&2 echo "Unknown argument: '$1'" ;;
+    esac
+fi
+
+find "$MED_DIR" -type f -print0 \
     | sort -z \
     | fzf --read0 --print0 -e -i -m +s \
     | sed -z -e "s|'|\'|g" -e 's|"|\"|g' \
-    | xargs -0 -I {} sh -c "xdg-open '{}' >/dev/null 2>&1 &"
+    | xargs -0r -I {} sh -c "xdg-open '{}' >/dev/null 2>&1 &"
 

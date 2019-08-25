@@ -1,8 +1,9 @@
 #! /usr/bin/env sh
 
 
-IFS=$'\n'
+find "$@" -type f -print0 \
+  | fzf -e -i -m --read0 --print0 \
+  | xargs -r0L 1 -I {} sh -c "xdg-open '{}' >/dev/null 2>&1 &"
+# | parallel -0r -P 0 --bg xdg-open
+# | xargs -r0L 1 -P 0 xdg-open 
 
-for file in $(find "$1" -type f | fzf -e -i -m); do
-    xdg-open "$file" &
-done

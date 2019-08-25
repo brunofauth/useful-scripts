@@ -20,6 +20,6 @@ scripts=$(find "$SCRIPTS" -type f | grep -ve .git)
 file=$(echo "$scripts" | choose "What to edit?")
 
 
-if [[ -n "$file" ]]; then
+if [ -e "$file" ]; then
     $EDITOR "$file"
 fi
