@@ -46,6 +46,10 @@ for prog in "$@"; do
             cp -rf .config/sxiv  "$XDG_CONFIG_HOME"
             echo "Updated sxiv."
             ;;
+        qutebrowser)
+            cp -rf .config/qutebrowser "$XDG_CONFIG_HOME"
+            cp -rf .local/share/qutebrowser "$XDG_DATA_HOME"
+            echo "Updated qutebrowser."
         -h)
             echo "i3 rofi fish bash polybar sxiv profile i3laptop laptopdiff"
             ;;
