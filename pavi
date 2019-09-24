@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /usr/bin/env sh
 
 
 pkill pulseaudio
@@ -8,3 +8,4 @@ pkill volumeicon
 pulseaudio &
 sleep 10
 volumeicon &
+

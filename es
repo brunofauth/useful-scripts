@@ -1,25 +1,18 @@
 #! /usr/bin/env sh
 
 
-if [ -t 1 ]; then
-    in_terminal=true
-fi
-
-
-choose() {
-    choices=$(xargs -r -I "{}" echo "{}")
-    if [ "$in_terminal" = true ]; then
-        echo "$choices" | fzf -e -i --prompt="$1 "
-    else
-        echo "$choices" | rofi -dmenu -i -p "$1"
+for script in "$@"; do
+    if [ -e "$SCRIPTS/$script" ]; then
+        "$EDITOR" "$SCRIPTS/$script" 
     fi
-}
+done
 
 
-scripts=$(find "$SCRIPTS" -type f | grep -ve .git)
-file=$(echo "$scripts" | choose "What to edit?")
-
-
-if [ -e "$file" ]; then
-    $EDITOR "$file"
+if [ "$#" -eq 0 ]; then
+    find "$SCRIPTS" -type f -print0 \
+        | grep -zve .git \
+        | sort -z \
+        | fzf -e -i -m --read0 --print0 \
+        | xargs -r0L 1 -I {} sh -c "</dev/tty '$EDITOR' '{}'"
 fi
+

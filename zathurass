@@ -3,15 +3,9 @@
 
 tmpdir=$(mktemp -d)
 
-echo TMPDIR=$tmpdir
-
 soffice --convert-to pdf "$@" --outdir "$tmpdir"
 
-echo $(ls "$tmpdir")
-
-for file in $(ls "$tmpdir")
-do
+for file in $(ls "$tmpdir"); do
     zathura "$tmpdir/$file"
 done
-
 

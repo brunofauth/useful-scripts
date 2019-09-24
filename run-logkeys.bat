@@ -1,1 +1,0 @@
-start /b logkeys temp.txt
