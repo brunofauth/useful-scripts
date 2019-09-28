@@ -1,0 +1,40 @@
+#! /usr/bin/env sh
+
+
+src_files="$(mktemp)"
+
+if [ $# -eq 0 ]; then
+    ls >> "$src_files"
+else
+    for arg in "$@"; do
+        echo "$arg" >> "$src_files"
+    done
+fi
+
+
+dst_files="$(mktemp)"
+echo "# Rename your files, save and quit" >> "$dst_files"
+
+while read -r file; do
+    echo "$file" >> "$dst_files"
+done <"$src_files"
+
+"$EDITOR" "$dst_files"
+sed -Ei '/^[[:space:]]*#/d' "$dst_files"
+
+
+cmd_list="$(mktemp)"
+echo "# The following commands will be executed" >> "$cmd_list"
+
+while read -r src <&3 && read -r dst <&4; do
+    echo "mv -vi \"$src\" \"$dst\"" >> "$cmd_list"
+done 3<"$src_files" 4<"$dst_files"
+
+"$EDITOR" "$cmd_list"
+sed -Ei '/^[[:space:]]*#/d' "$cmd_list"
+
+
+while read -r line; do
+    "$line"
+done <"$cmd_list"
+
