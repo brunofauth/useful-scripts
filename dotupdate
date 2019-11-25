@@ -1,7 +1,7 @@
 #! /usr/bin/env sh
 
 
-cd "$HOME/Dotfiles/general"
+cd "$DOTFILES/general"
 
 for prog in "$@"; do
     case "$prog" in
