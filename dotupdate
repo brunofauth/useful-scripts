@@ -1,7 +1,13 @@
 #! /usr/bin/env sh
 
 
-cd "$HOME/dots/general"
+if [ -d "$DOTFILES" ]; then
+    >&2 echo '"$DOTFILES" is not defined. Aborting.'
+    exit 1
+fi
+
+cd "$DOTFILES/general"
+
 
 for prog in "$@"; do
     case "$prog" in
