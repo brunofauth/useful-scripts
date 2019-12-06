@@ -3,7 +3,7 @@
 if [ -d "$2" ]; then
     MED_DIR="$2"
 else
-    MED_DIR="$HOME/Medicina"
+    MED_DIR="$HOME/med"
 fi
 
 if [ -n "$1" ]; then

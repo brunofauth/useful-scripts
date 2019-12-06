@@ -3,9 +3,10 @@
 
 pkill pulseaudio
 pkill volumeicon
+sleep 3
 
 
-pulseaudio &
-sleep 10
+start-pulseaudio-x11 &
+sleep 3
 volumeicon &
 

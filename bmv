@@ -22,12 +22,22 @@ done <"$src_files"
 "$EDITOR" "$dst_files"
 sed -Ei '/^[[:space:]]*#/d' "$dst_files"
 
+if cmp --silent "$src_files" "$dst_files"; then
+    >&2 echo "No name changed. Exiting." && exit 1
+fi
+
+if [ "$(wc -l < "$src_files")" -ne "$(wc -l < "$dst_files")" ]; then
+    >&2 echo "Unmatching ammount of names. Exiting." && exit 1
+fi
+
 
 cmd_list="$(mktemp)"
 echo "# The following commands will be executed" >> "$cmd_list"
 
 while read -r src <&3 && read -r dst <&4; do
-    echo "mv -vi \"$src\" \"$dst\"" >> "$cmd_list"
+    if [ "$src" != "$dst" ]; then
+        echo "mv -vi \"$src\" \"$dst\"" >> "$cmd_list"
+    fi
 done 3<"$src_files" 4<"$dst_files"
 
 "$EDITOR" "$cmd_list"
