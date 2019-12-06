@@ -1,7 +1,7 @@
 #! /usr/bin/env sh
 
 
-if [ -d "$DOTFILES" ]; then
+if [ ! -d "$DOTFILES" ]; then
     >&2 echo '"$DOTFILES" is not defined. Aborting.'
     exit 1
 fi
