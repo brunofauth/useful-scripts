@@ -57,8 +57,11 @@ for prog in "$@"; do
             cp -rf .local/share/qutebrowser "$XDG_DATA_HOME"
             echo "Updated qutebrowser."
             ;;
+        sxhkd)
+            cp -rf .config/sxhkd "$XDG_CONFIG_HOME"
+            echo "Updated sxhkd."
         -h)
-            echo "i3 rofi fish bash polybar sxiv profile i3laptop laptopdiff"
+            echo "i3 rofi fish bash polybar sxiv profile i3laptop laptopdiff sxhkd"
             ;;
         *)
             echo "Unknow option $prog. run dotupdate -l to list valid args"
