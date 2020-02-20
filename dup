@@ -60,6 +60,7 @@ for prog in "$@"; do
         sxhkd)
             cp -rf .config/sxhkd "$XDG_CONFIG_HOME"
             echo "Updated sxhkd."
+            ;;
         -h)
             echo "i3 rofi fish bash polybar sxiv profile i3laptop laptopdiff sxhkd"
             ;;
