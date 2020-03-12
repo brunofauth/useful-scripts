@@ -10,8 +10,8 @@ if [ -n "$1" ]; then
     case "$1" in
         -h) echo "Usage: $0 SUBDIR DIR" && exit ;;
         -l) MED_DIR="$MED_DIR/livros" ;;
-        -[1-9]) MED_DIR="$MED_DIR/nivel$1" ;;
-        -1[0-2]) MED_DIR="$MED_DIR/nivel$1" ;;
+        -[1-9]) MED_DIR="$MED_DIR/$(echo "$1" | cut -d '-' -f 2-)" ;;
+        -1[0-2]) MED_DIR="$MED_DIR/$(echo "$1" | cut -d '-' -f 2-)" ;;
         *) >&2 echo "Unknown argument: '$1'" ;;
     esac
 fi
