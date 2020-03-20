@@ -5,7 +5,7 @@ ICON_DL="/usr/share/icons/Papirus/32x32/apps/downloader-arrow.svg"
 ICON_ERR="/usr/share/icons/Papirus/32x32/status/dialog-error.svg"
 
 
-cd "$XDG_VIDEOS_DIR" || exit 1
+cd "$XDG_VIDEOS_DIR" || >&2 echo '$XDG_VIDEOS_DIR not defined.' && exit 1
 
 
 url=$(xclip -selection clipboard -o)

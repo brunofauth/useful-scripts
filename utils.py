@@ -63,4 +63,3 @@ def first(iter, func=bool):
             return item
     raise ValueError("No such item.")
 
-

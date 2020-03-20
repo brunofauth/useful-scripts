@@ -1,7 +1,9 @@
 import pygame
-from random import randrange
+import random
+
 
 pygame.init()
+
 
 def score(score):
     text = small_font.render("Score: " + str(score), True, WHITE)
@@ -9,7 +11,7 @@ def score(score):
 
 
 def get_apple():
-    x, y = randrange(9) * tile_size, randrange(9) * tile_size
+    x, y = random.randrange(9) * tile_size, random.randrange(9) * tile_size
     return pygame.Rect(x, y, tile_size, tile_size)
 
 
@@ -40,6 +42,7 @@ def game_over_loop():
                 if event.key == pygame.K_c:
                     return True
         clock.tick(FPS)
+
 
 def snake_loop():
     head = pygame.Rect(9 // 2 * tile_size, 9 // 2 * tile_size, tile_size, tile_size)
@@ -121,3 +124,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+

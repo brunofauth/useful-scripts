@@ -1,6 +1,7 @@
-if [ -n $(pgrep i3-nagbar) ]; then
-    pkill i3-nagbar
-fi
+#! /usr/bin/sh
+
+
+pidof -s i3-nagbar && pkill i3-nagbar
 
 
 [ -z $(xclip -o) ] && exit

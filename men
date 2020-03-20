@@ -1,3 +1,4 @@
 #! /bin/sh
 
 man -k . | fzf -e -i | cut -d' ' -f1 | xargs -r man
+
