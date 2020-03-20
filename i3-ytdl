@@ -3,18 +3,25 @@
 
 ICON_DL="/usr/share/icons/Papirus/32x32/apps/downloader-arrow.svg"
 ICON_ERR="/usr/share/icons/Papirus/32x32/status/dialog-error.svg"
-ICON_DONE=""
 
 
-cd "$HOME"/Videos
+cd "$XDG_VIDEOS_DIR" || exit 1
+
 
 url=$(xclip -selection clipboard -o)
 
-notify-send "Commencing video download." "$url" -t 5000 -i "$ICON_DL"
-youtube-dl "$url"
-
-if [ $? == 0 ]; then
-    notify-send "Download has finished!" -t 5000
-else
-    notify-send "Error on download!" -t 5000 -i "$ICON_ERR"
+if [ -z "$url" ]; then
+    notify-send "Couldn't download video" "Clipboard is empty" -t 5000 -i "$ICON_ERR"
+    exit 1
 fi
+
+notify-send "Commencing video download." "URL: \"$url\"" -t 5000 -i "$ICON_DL"
+
+
+if ! youtube-dl "$url"; then
+    notify-send "Error on download!" -t 5000 -i "$ICON_ERR"
+    exit 1
+fi
+
+notify-send "Download has finished!" -t 5000
+

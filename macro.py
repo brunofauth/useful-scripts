@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # coding: UTF-8
 
 # Works but execution takes too long.
@@ -83,7 +83,7 @@ class RecHandler(object):
 
 class RunHandler(object):
     def __init__(self):
-        # Perhaps multiple inheritance is more elegant
+        # Perhaps multiple inheritance would be more elegant
         self.kc = pk.Controller()
         self.mc = pm.Controller()
     

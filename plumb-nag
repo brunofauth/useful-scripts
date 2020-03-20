@@ -8,3 +8,4 @@ fi
 
 i3-nagbar -m "$(xclip -o)" &
 echo -n | xclip -selection primary
+

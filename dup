@@ -1,12 +1,13 @@
 #! /usr/bin/env sh
 
 
-if [ -z "$DOTFILES" ]; then
+if [ ! -d "$DOTFILES" ]; then
     >&2 echo '"$DOTFILES" is not defined. Aborting.'
     exit 1
 fi
 
 cd "$DOTFILES/general"
+
 
 for prog in "$@"; do
     case "$prog" in
@@ -56,8 +57,12 @@ for prog in "$@"; do
             cp -rf .local/share/qutebrowser "$XDG_DATA_HOME"
             echo "Updated qutebrowser."
             ;;
+        sxhkd)
+            cp -rf .config/sxhkd "$XDG_CONFIG_HOME"
+            echo "Updated sxhkd."
+            ;;
         -h)
-            echo "i3 rofi fish bash polybar sxiv profile i3laptop laptopdiff"
+            echo "i3 rofi fish bash polybar sxiv profile i3laptop laptopdiff sxhkd"
             ;;
         *)
             echo "Unknow option $prog. run dotupdate -l to list valid args"
