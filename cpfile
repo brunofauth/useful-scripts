@@ -1,3 +1,4 @@
 #! /usr/bin/env sh
 
-cat "$1" | xclip -t "$(file -b --mime-type "$1")" -selection clipboard
+< "$1" xclip -t "$(file -b --mime-type "$1")" -selection clipboard
+
