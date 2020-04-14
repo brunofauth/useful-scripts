@@ -13,17 +13,8 @@ for prog in "$@"; do
             cp -rf .config/i3/ "$XDG_CONFIG_HOME"
             echo "Updated i3wm config"
             ;;
-        i3laptop)
-            cp -rf .config/i3/ "$XDG_CONFIG_HOME"
-            patch "$XDG_CONFIG_HOME/i3/config" .config/i3/laptop.diff
-            echo "Updated i3wm laptop config"
-            ;;
-        laptopdiff)
-            diff -u .config/i3/config  "$XDG_CONFIG_HOME/i3/config" > .config/i3/laptop.diff
-            echo "Updated i3wm laptop.diff"
-            ;;
         vim)
-            cp -rf .vim "$HOME"
+            cp -rf .config/vim "$XDG_CONFIG_HOME"
             echo "Updated vim."
             ;;
         rofi)
