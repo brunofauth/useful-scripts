@@ -19,10 +19,10 @@ def iter_segments(fd, regex):
 
 
 
-def main(regex, big_file, prefix="", suffix=""):
+def main(regex, big_file, out_format="{i:0=3d}"):
     with open(big_file) as src:
         for i, lines in enumerate(iter_segments(src, regex)):
-            with open(f"{prefix}{i}{suffix}", "w") as dst:
+            with open(out_format.format(i=i), "w") as dst:
                 dst.writelines(lines)
 
 
