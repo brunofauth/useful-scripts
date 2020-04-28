@@ -3,5 +3,6 @@
 
 out="$(sdiff -l "$1" "$2" | cat -n | grep -v -e '($')"
 
-[ -n "$out" ] && less <<< "$out"
+# [ -n "$out" ] && less <<< "$out"
+[ -n "$out" ] && { echo "$out" | less; }
 

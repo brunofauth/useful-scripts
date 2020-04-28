@@ -50,6 +50,10 @@ for prog in "$@"; do
             cp -rf .config/sxhkd "$XDG_CONFIG_HOME"
             echo "Updated sxhkd."
             ;;
+        aliases)
+            cp -rf .config/aliases.sh "$XDG_CONFIG_HOME"
+            echo "Updated aliases.sh"
+            ;;
         -h)
             echo "i3 rofi fish bash polybar sxiv profile i3laptop laptopdiff sxhkd"
             ;;
