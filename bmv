@@ -19,7 +19,7 @@ while read -r file; do
     echo "$file" >> "$dst_files"
 done <"$src_files"
 
-"$EDITOR" "$dst_files"
+"${EDITOR:-vim}" "$dst_files"
 sed -Ei '/^[[:space:]]*#/d' "$dst_files"
 
 if cmp --silent "$src_files" "$dst_files"; then
@@ -40,7 +40,7 @@ while read -r src <&3 && read -r dst <&4; do
     fi
 done 3<"$src_files" 4<"$dst_files"
 
-"$EDITOR" "$cmd_list"
+"${EDITOR:-vim}" "$cmd_list"
 sed -Ei '/^[[:space:]]*#/d' "$cmd_list"
 
 
