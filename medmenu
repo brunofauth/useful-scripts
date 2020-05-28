@@ -1,22 +1,60 @@
 #! /usr/bin/env sh
 
-if [ -d "$2" ]; then
-    MED_DIR="$2"
-else
-    MED_DIR="$HOME/med"
-fi
 
-if [ -n "$1" ]; then
+USAGE="
+SYNOPSYS
+    $(basename "$0") [options] <sub_dir...>
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits.
+
+    -d, --med-dir
+        The root folder of all material and things
+
+SUB DIRECTORIES
+    One or more directories, children of MED_DIR, to search for files in.
+    Any directory child of MED_DIR will be accepted, although the standard
+    only ensures the existence of the following sub directories:
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, l.
+    These contain the files used in each semester, with exception of 'l',
+    which contains books for all semesters, like a library
+"
+
+
+fatal() {
+    >&2 echo "$@"
+    exit 1
+}
+
+
+args="$(getopt -o "hd:" -l "help,dir" -n "medmenu" -- "$@")" \
+    || fatal "Error parsing arguments!"
+eval set -- "$args"
+
+
+while true; do
     case "$1" in
-        -h) echo "Usage: $0 SUBDIR DIR" && exit ;;
-        -l) MED_DIR="$MED_DIR/livros" ;;
-        -[1-9]) MED_DIR="$MED_DIR/$(echo "$1" | cut -d '-' -f 2-)" ;;
-        -1[0-2]) MED_DIR="$MED_DIR/$(echo "$1" | cut -d '-' -f 2-)" ;;
-        *) >&2 echo "Unknown argument: '$1'" ;;
+        '-h'|'--help')
+            echo "$USAGE"
+            exit 0
+            ;;
+        '-d'|'--dir')
+            shift
+            MED_DIR="$1"
+            shift
+            ;;
+        '--')
+            shift
+            break
+            ;;
     esac
-fi
+done
 
-find "$MED_DIR" -type f -print0 \
+
+cd "${MED_DIR:-"$HOME/med"}" || exit 1
+
+find "$@" -type f -print0 \
     | sort -z \
     | fzf --read0 --print0 -e -i -m +s \
     | sed -z -e "s|'|\'|g" -e 's|"|\"|g' \
