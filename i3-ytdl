@@ -8,7 +8,7 @@ ICON_ERR="/usr/share/icons/Papirus/32x32/status/dialog-error.svg"
 cd "$XDG_VIDEOS_DIR" || >&2 echo '$XDG_VIDEOS_DIR not defined.' && exit 1
 
 
-url=$(xclip -selection clipboard -o)
+url=$(xsel -ob)
 
 if [ -z "$url" ]; then
     notify-send "Couldn't download video" "Clipboard is empty" -t 5000 -i "$ICON_ERR"

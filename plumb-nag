@@ -7,6 +7,6 @@ pidof -s i3-nagbar && pkill i3-nagbar
 [ -z $(xclip -o) ] && exit
 
 
-i3-nagbar -m "$(xclip -o)" &
-echo -n | xclip -selection primary
+i3-nagbar -m "$(xsel -ob)" &
+xsel -c
 
