@@ -3,7 +3,7 @@
 
 USAGE="
 SYNOPSYS
-    $(basename "$0") [options] <sub_dir...>
+    ${0##*/} [options] <sub_dir...>
 
 OPTIONS
     -h, --help
