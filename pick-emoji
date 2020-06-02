@@ -1,18 +1,15 @@
 #! /usr/bin/env sh
 
 
-if [ -f "$1" ]; then
-    emoji_file="$1"
-else
-    emoji_file="$HOME/.local/share/emoji"
-fi
+emoji_file="${XDG_DATA_HOME:-$HOME/.local/share}/emoji"
+[ -f "$emoji_file" ] || { >&2 echo "No emoji source" && exit 1; }
 
 
-chosen=$(cat "$emoji_file" | rofi -dmenu -i -p "Pick an emoji")
+chosen=$(rofi -multi-select -dmenu -i -p "Pick emojies" -input "$emoji_file")
 [ -z "$chosen" ] && exit
 
 
-emoji=$(echo "$chosen" | awk '{print $1}')
-echo -n "$emoji" | xclip -selection clipboard
-notify-send "Copied '$emoji' into the clipboard."
+emojies=$(echo "$chosen" | cut -d ' ' -f1 | paste -sd '')
+echo -n $emojies | xsel -bi
+notify-send "Copied '$emojies' into the clipboard."
 
