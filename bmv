@@ -88,5 +88,5 @@ done 3<"$src_files" 4<"$dst_files"
 
 "${EDITOR:-vim}" "$cmd_list"
 sed -Ei '/^[[:space:]]*#/d' "$cmd_list"
-< "$cmd_list" xargs -rI '{}' sh -c "eval '{}'"
+< "$cmd_list" xargs -rI '{}' sh -c '{}'
 
