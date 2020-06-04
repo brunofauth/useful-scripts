@@ -30,7 +30,7 @@ fatal() {
 }
 
 
-DO_CMD=mv
+DO_CMD="mv"
 
 
 args="$(getopt -o "hc" -l "help,copy" -n "bmv" -- "$@")" \
@@ -79,9 +79,8 @@ cmd_list="$(mktemp)"
 echo "# The following commands will be executed" >> "$cmd_list"
 
 while read -r src <&3 && read -r dst <&4; do
-    if [ "$src" != "$dst" ]; then
-        echo "'$DO_CMD' -vi '$src' '$dst'" >> "$cmd_list"
-    fi
+    [ "$src" != "$dst" ] \
+        && echo "'$DO_CMD' -vi '$src' '$dst'" >> "$cmd_list"
 done 3<"$src_files" 4<"$dst_files"
 
 [ "$(wc -l < "$cmd_list")" -lt 2 ] && fatal "No name changed. Exiting."
