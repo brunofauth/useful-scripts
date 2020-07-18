@@ -1,0 +1,11 @@
+#! /bin/sh
+
+
+if grep -qsEi "(Microsoft|WSL)" /proc/version; then
+    url="$(powershell.exe -Command Get-Clipboard)"
+else
+    url="$(xsel -bo)"
+fi
+
+git clone "$url" "$@"
+
