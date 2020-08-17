@@ -1,4 +1,58 @@
-#! /usr/bin/env sh
+#! /bin/sh
+
+
+USAGE="
+SYNOPSYS
+    ${0##*/} [options] [files...]
+
+DESCRIPTION
+    Edit a list of filenames in your \$EDITOR (default=vim) to be moved.
+    If no files are given, use all files present in the current directory.
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits.
+
+    -c, --copy
+        Copies files, instead of moving them
+
+NOTE
+    If the names of your files conflict with those of the flags, put them
+    after a double dash (--), like this:
+        ${0##*/} -- --copy
+    This will rename a file called '--copy', instead of activating the
+    '--copy' switch.
+"
+
+fatal() {
+    >&2 echo "$@"
+    exit 1
+}
+
+
+DO_CMD="mv"
+
+
+args="$(getopt -o "hc" -l "help,copy" -n "bmv" -- "$@")" \
+    || fatal "Error parsing arguments!"
+eval set -- "$args"
+
+while true; do
+    case "$1" in
+        '-h'|'--help')
+            echo "$USAGE"
+            exit 0
+            ;;
+        '-c'|'--copy')
+            DO_CMD="cp"
+            shift
+            ;;
+        '--')
+            shift
+            break
+            ;;
+    esac
+done
 
 
 src_files="$(mktemp)"
@@ -6,45 +60,32 @@ src_files="$(mktemp)"
 if [ $# -eq 0 ]; then
     ls >> "$src_files"
 else
-    for arg in "$@"; do
-        echo "$arg" >> "$src_files"
-    done
+    printf "%s\n" "$@" >> "$src_files"
 fi
 
 
 dst_files="$(mktemp)"
 echo "# Rename your files, save and quit" >> "$dst_files"
-
-while read -r file; do
-    echo "$file" >> "$dst_files"
-done <"$src_files"
+cat "$src_files" >> "$dst_files"
 
 "${EDITOR:-vim}" "$dst_files"
 sed -Ei '/^[[:space:]]*#/d' "$dst_files"
 
-if cmp --silent "$src_files" "$dst_files"; then
-    >&2 echo "No name changed. Exiting." && exit 1
-fi
-
-if [ "$(wc -l < "$src_files")" -ne "$(wc -l < "$dst_files")" ]; then
-    >&2 echo "Unmatching ammount of names. Exiting." && exit 1
-fi
+[ "$(wc -l < "$src_files")" -ne "$(wc -l < "$dst_files")" ] \
+    && fatal "Unmatching ammount of names. Exiting."
 
 
 cmd_list="$(mktemp)"
 echo "# The following commands will be executed" >> "$cmd_list"
 
 while read -r src <&3 && read -r dst <&4; do
-    if [ "$src" != "$dst" ]; then
-        echo "mv -vi \"$src\" \"$dst\"" >> "$cmd_list"
-    fi
+    [ "$src" != "$dst" ] \
+        && echo "'$DO_CMD' -vi '$src' '$dst'" >> "$cmd_list"
 done 3<"$src_files" 4<"$dst_files"
+
+[ "$(wc -l < "$cmd_list")" -lt 2 ] && fatal "No name changed. Exiting."
 
 "${EDITOR:-vim}" "$cmd_list"
 sed -Ei '/^[[:space:]]*#/d' "$cmd_list"
-
-
-while read -r line; do
-    eval "$line"
-done <"$cmd_list"
+< "$cmd_list" xargs -rI '{}' sh -c '{}'
 
