@@ -1,0 +1,31 @@
+#! /bin/sh
+
+
+USAGE="$0 <browser0> [...browserN]"
+
+
+fatal() {
+    for msg in "$@"; do
+        >&2 echo "$msg"
+    done
+    exit 1
+}
+
+
+[ "$#" -lt 1 ] && fatal "$USAGE"
+
+
+for browser in "$@"; do
+    case "$browser" in
+        ff|firefox)
+            firefox --private &
+            ;;
+        qb|qutebrowser)
+            qutebrowser ":open -p"
+            ;;
+        *)
+            fatal "Unsupported browser"
+            ;;
+    esac
+done
+

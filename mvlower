@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 
+import shutil
 import sys
 import os
 
@@ -11,11 +12,11 @@ def main(*files):
         name = os.path.join(dir, base.lower().replace(" ", "-"))
 
         if os.path.exists(name):
-            print(f"'{name}' exists, skipping.", file=sys.stderr)
-        
-        os.system(f'mv "{file}" "{name}"')
+            print(f"'{name}' already exists, skipping.", file=sys.stderr)
+        else:
+            shutil.move(file, name)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main(*sys.argv[1:])
 
