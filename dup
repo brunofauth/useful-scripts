@@ -62,7 +62,7 @@ for prog in "$@"; do
             echo "i3 rofi fish bash polybar sxiv profile i3laptop laptopdiff sxhkd"
             ;;
         *)
-            echo "Unknow option $prog. run dotupdate -l to list valid args"
+            echo "Unknow option $prog. run dotupdate -h to list valid args"
             ;;
     esac
 done
