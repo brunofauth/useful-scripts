@@ -1,7 +1,24 @@
 #! /usr/bin/env sh
 
+
+starting_dir="$(pwd)"
+
 for file in "$@"; do
-    case "$(mimetype -b "$file")" in
+
+    base_dir="$(dirname "$file")"
+
+    if [ -f "$base_dir/compileitrc" ]; then
+        cd "$base_dir" || exit
+        ./compileitrc || exit
+        cd "$starting_dir" || exit
+        continue
+    else
+        >&2 echo "Can't find a 'compileitrc' in $base_dir"
+        >&2 echo "Trying default strategy for file '$file'"
+    fi
+
+    file_type="$(mimetype -b "$file")"
+    case "$file_type" in
         text/x-python)
             python "$file"
             ;;
@@ -9,9 +26,11 @@ for file in "$@"; do
             python2 "$file"
             ;;
         text/x-python3)
+            pylint -E "$file"
             python3 "$file"
             ;;
         application/x-shellscript)
+            shellcheck "$file"
             sh "$file"
             ;;
         text/x-tex)
@@ -21,7 +40,8 @@ for file in "$@"; do
             pandoc "$file" -o "${file%.*}.pdf"
             ;;
         *)
-            >&2 echo "No case for files like $file"
+            >&2 echo "No default strategy found for file type $file_type"
             ;;
     esac
 done
+
