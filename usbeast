@@ -28,7 +28,7 @@ if [ "$1" = "-m" ]; then
     
     msg=$(udisksctl mount -b "$chosen")
     ret=$?
-    echo -n $msg | sed -r "s|^Mounted $chosen at (.+)\.$|\1|" | xsel -bi
+    echo -n $msg | sed -r "s|^Mounted $chosen at||" | xsel -bi
 
 elif [ "$1" = "-u" ]; then
     parts=$(lsblk -lp | grep "part ." | awk '{print $1" ("$7")"}')
