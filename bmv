@@ -31,9 +31,10 @@ fatal() {
 
 
 DO_CMD="mv"
+DO_LOG=0
 
 
-args="$(getopt -o "hc" -l "help,copy" -n "bmv" -- "$@")" \
+args="$(getopt -o "hcl" -l "help,copy,log" -n "bmv" -- "$@")" \
     || fatal "Error parsing arguments!"
 eval set -- "$args"
 
@@ -45,6 +46,10 @@ while true; do
             ;;
         '-c'|'--copy')
             DO_CMD="cp"
+            shift
+            ;;
+        '-l'|'--log')
+            DO_LOG=1
             shift
             ;;
         '--')
@@ -87,5 +92,17 @@ done 3<"$src_files" 4<"$dst_files"
 
 "${EDITOR:-vim}" "$cmd_list"
 sed -Ei '/^[[:space:]]*#/d' "$cmd_list"
-< "$cmd_list" xargs -rI '{}' sh -c '{}'
+
+if [ "$DO_LOG" = "1" ]; then
+   cp "$cmd_list" bmv.log
+   echo "Logged 'cmd_list' to 'bmv.log'"
+fi
+
+# I'd rather not use either a while loop or 'eval' here, but
+# xargs was giving me errors when trying to mv files with spaces,
+# even though they're surrounded by simple quotation marks.
+while read -r line; do
+    eval "$line"
+done < "$cmd_list"
+# < "$cmd_list" xargs -rI '{}' sh -c '{}'
 
