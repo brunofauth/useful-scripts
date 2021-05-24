@@ -1,0 +1,64 @@
+#! /bin/sh
+
+
+USAGE="
+SYNOPSYS
+    ${0##*/} [options] <files...>
+
+DESCRIPTION
+    Backs up (copies) 'files' into '.files.bak'
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits.
+
+    -p, --prompt
+        Prompt before overwriting
+
+    -l, --log
+        Log backed up files.
+"
+
+
+args="$(getopt -o "hpl" -l "help,prompt,log" -n "bak" -- "$@")" \
+    || fatal "Error parsing arguments!"
+eval set -- "$args"
+
+
+while true; do
+    case "$1" in
+        '-h'|'--help')
+            echo "$USAGE"
+            exit 0
+            ;;
+        '-p'|'--prompt')
+            CP_FLAGS="$CP_FLAGS --interactive"
+            shift
+            ;;
+        '-l'|'--log')
+            DO_LOG=1
+            shift
+            ;;
+        '--')
+            shift
+            break
+            ;;
+    esac
+done
+
+
+CP_FLAGS="${CP_FLAGS:-""}"
+DO_LOG="${DO_LOG:-0}"
+
+
+backup(){
+    dst="$(dirname "$1")/.$(basename "$1").bak"
+    cp $CP_FLAGS "$1" "$dst"
+    [ "$DO_LOG" -eq 1 ] && >&2 echo "Backed up '$1' to '$dst'"
+}
+
+
+for file in "$@"; do
+    backup "$file"
+done
+
