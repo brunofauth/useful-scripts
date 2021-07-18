@@ -1,0 +1,55 @@
+#! /usr/bin/env python3
+
+
+# import scipy.optimize as spo
+import numpy as np
+import math
+import sys
+
+
+def mk_data_arrays():
+    xs = []
+    ys = []
+    for line in sys.stdin:
+        x, y = float((data:=line.strip().split())[0]),float(data[1])
+        xs.append(x)
+        ys.append(y)
+    return np.array(xs), np.array(ys)
+
+
+def mk_exp(a, b):
+    return lambda x: math.exp(b) * math.exp(a*x)
+
+
+def main():
+    pass
+
+if __name__ == "__main__":
+    # xsel -ob | sed -e 's|\.||g' -e 's|^ *||g' | enumerate-from 2001 | fit
+    x, y = mk_data_arrays()
+    log_y = np.log(y)
+
+    a, b = np.polyfit(x, y, 1)
+    print("linear fit")
+    print(f"y={a}*x+{b}")
+    fx=lambda x: a*x+b
+    print("ratio:", f"{fx(2011)/fx(2010)-1:+.2%}")
+    print("2022:", fx(2022))
+    print()
+
+    a, b = np.polyfit(x, log_y, 1)
+    print("unweighted curve fit")
+    print(f"y={math.exp(b)}*EXP({a}*x)")
+    fx=mk_exp(a, b)
+    print("ratio:", f"{fx(2011)/fx(2010)-1:+.2%}")
+    print("2022:", fx(2022))
+    print()
+
+    a, b = np.polyfit(x, log_y, 1, w=np.sqrt(y))
+    print("weighted curve fit")
+    print(f"y=EXP({b})*EXP({a}*x)")
+    fx=mk_exp(a, b)
+    print("ratio:", f"{fx(2011)/fx(2010)-1:+.2%}")
+    print("2022:", fx(2022))
+    print()
+

@@ -1,0 +1,30 @@
+#! /usr/bin/env python3
+
+
+import argparse as ap
+import sys
+
+
+def get_args():
+    parser = ap.ArgumentParser(description="Enumerate lines piped into stdin.")
+
+    parser.add_argument("-n", "--start-number", nargs=1, default=0,
+        type=int, help="The number from which to start enumerating")
+    parser.add_argument("-e", "--skip-empty", action="store_true",
+        help="If present, empty lines won't increment the counting")
+    parser.add_argument("-s", "--step", nargs=1, default=1, type=int,
+        help="Step, like in range()")
+
+    return parser.parse_args()
+
+
+def main(start_number: int=0, skip_empty: bool=False, step: int=1) -> None:
+    for line in sys.stdin:
+        if line.strip():
+            sys.stdout.write(str(start) + " " + line)
+        start += 1
+
+
+if __name__ == "__main__":
+    main(*get_args())
+
