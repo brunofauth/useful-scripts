@@ -16,6 +16,9 @@ OPTIONS
     -c, --copy
         Copies files, instead of moving them
 
+    -d --dotfiles
+        Do not ignore files prefixed with a '.'
+
 NOTE
     If the names of your files conflict with those of the flags, put them
     after a double dash (--), like this:
@@ -32,9 +35,10 @@ fatal() {
 
 DO_CMD="mv"
 DO_LOG=0
+DO_DOT=0
 
 
-args="$(getopt -o "hcl" -l "help,copy,log" -n "bmv" -- "$@")" \
+args="$(getopt -o "hcld" -l "help,copy,log,dotfiles" -n "bmv" -- "$@")" \
     || fatal "Error parsing arguments!"
 eval set -- "$args"
 
@@ -52,6 +56,10 @@ while true; do
             DO_LOG=1
             shift
             ;;
+        '-d'|'--dotfiles')
+            DO_DOT=1
+            shift
+            ;;
         '--')
             shift
             break
@@ -61,9 +69,11 @@ done
 
 
 src_files="$(mktemp)"
+ls_flags=""
+[ "$DO_DOT" = 1 ] && ls_flags="$ls_flags -a"
 
 if [ $# -eq 0 ]; then
-    ls >> "$src_files"
+    ls $ls_flags >> "$src_files"
 else
     printf "%s\n" "$@" >> "$src_files"
 fi
