@@ -78,10 +78,6 @@ class Regression(ABC):
             f"    Rate of change: {self.ratio - 1 :+.2%}"
         )
 
-    @abstractmethod
-    def next(self) -> float:
-        """Returns the next projected value"""
-
 
 class LinearRegression(Regression):
 
