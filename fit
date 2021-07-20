@@ -1,55 +1,230 @@
 #! /usr/bin/env python3
 
 
-# import scipy.optimize as spo
+from __future__ import annotations
+
+
+import argparse as ap
 import numpy as np
-import math
+import matplotlib.pyplot as plt
 import sys
+from dataclasses import dataclass
+from abc import ABC, abstractmethod
+import locale as lo
+import enum
+import shlex
+from typing import Union, Sequence
 
 
-def mk_data_arrays():
+# https://stackoverflow.com/questions/18275023/
+class CustomHelpFormatter(ap.HelpFormatter):
+    def _format_action_invocation(self, action):
+        if not action.option_strings or action.nargs == 0:
+            return super()._format_action_invocation(action)
+        default = self._get_default_metavar_for_optional(action)
+        args_string = self._format_args(action, default)
+        return ', '.join(action.option_strings) + ' ' + args_string
+
+
+@dataclass(frozen=True)
+class Series:
+    x_label: str
+    y_label: str
+    x_values: np.ndarray
+    y_values: np.ndarray
+
+
+@dataclass(frozen=True)
+class Regression(ABC):
+
+    a: float
+    b: float
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Returns the name of this model."""
+
+    @property
+    @abstractmethod
+    def func_python(self) -> str:
+        """Get a python expression representing the curve model."""
+
+    @property
+    @abstractmethod
+    def func_spreadsheet(self) -> str:
+        """Get a 'spreadsheet' expression representing the curve model."""
+
+    @abstractmethod
+    def at(self, x_value: Union[float, np.array]) -> Union[float, np.array]:
+        """Returns the Y value at X 'x_value'."""
+
+    @property
+    def ratio(self) -> float:
+        """Get the ratio between two adjascent terms described by this model."""
+        return self.at(2001) / self.at(2000)
+
+    @classmethod
+    @abstractmethod
+    def from_series(cls, xs: np.ndarray, ys: np.ndarray) -> Regression:
+        """Construct a model from a series of points"""
+
+    def __str__(self):
+        return (
+            f"{self.name}:\n"
+            f"    Python definition: {self.func_python}\n"
+            f"    Spreadsheet definition: {self.func_spreadsheet}\n"
+            f"    Ratio: {self.ratio}\n"
+            f"    Rate of change: {self.ratio - 1 :+.2%}"
+        )
+
+    @abstractmethod
+    def next(self) -> float:
+        """Returns the next projected value"""
+
+
+class LinearRegression(Regression):
+
+    @property
+    def name(self) -> str:
+        return "Linear Regression"
+
+    @property
+    def func_python(self) -> str:
+        return f"lambda x: {self.a} * x + {self.b}"
+
+    @property
+    def func_spreadsheet(self) -> str:
+        return f"{self.a} * x + {self.b}"
+    
+    def at(self, x_value: Union[float, np.array]) -> Union[float, np.array]:
+        return self.a * x_value + self.b
+    
+    @classmethod
+    def from_series(cls, xs: np.ndarray, ys: np.ndarray) -> LinearRegression:
+        return cls(*np.polyfit(xs, ys, 1))
+
+
+class ExpRegression(Regression):
+
+    @property
+    def name(self) -> str:
+        return "Exponential Regression"
+
+    @property
+    def func_python(self) -> str:
+        return f"lambda x: {np.exp(self.b)} * e^({self.a} * x)"
+
+    @property
+    def func_spreadsheet(self) -> str:
+        return f"={np.exp(self.b)} * EXP({self.a} * x)"
+
+    def at(self, x_value: Union[float, np.array]) -> Union[float, np.array]:
+        return np.exp(self.b) * np.exp(self.a * x_value)
+    
+    @classmethod
+    def from_series(cls, xs: np.ndarray, ys: np.ndarray) -> ExpRegression:
+        return cls(*np.polyfit(xs, np.log(ys), 1))
+
+
+class WeightedExpRegression(ExpRegression):
+
+    @property
+    def name(self) -> str:
+        return "Weighted Exponential Regression"
+    
+    @classmethod
+    def from_series(cls, xs: np.ndarray, ys: np.ndarray) -> ExpRegression:
+        return cls(*np.polyfit(xs, np.log(ys), 1, w=np.sqrt(ys)))
+
+
+@enum.unique
+class Models(enum.Enum):
+    LINEAR = LinearRegression
+    EXP = ExpRegression
+    WEXP = WeightedExpRegression
+
+
+MODELS = list(Models.__members__.keys())
+
+
+def get_args():
+    parser = ap.ArgumentParser(formatter_class=CustomHelpFormatter)
+
+    parser.add_argument("-t", "--type", nargs="+", choices=MODELS,
+        default=None, help="Which regression model(s) to use.", dest="models")
+    parser.add_argument("-m", "--multiple", action="store_true",
+        help="Read a line for X values and multiple others for Y values.")
+    parser.add_argument("-l", "--locale", default=lo.getdefaultlocale(),
+        help="Locale to use when parsing floats")
+    parser.add_argument("-g", "--graph", action="store_true",
+        help="Make a graph for each series and it's regression curves.")
+
+    return parser.parse_args()
+
+
+def parse_input_multiple():
+    """This treats the first value of each line as its label and treats the
+    first line as a common X for the other lines (Ys).
+    """
+
+    lines = (line.strip() for line in sys.stdin)
+    x_label, *raw_xs = shlex.split(next(lines))
+    xs = np.array([lo.atof(x) for x in raw_xs])
+    xs.flags.writeable = False
+
+    for line in lines:
+        y_label, *raw_ys = shlex.split(line)
+        yield Series(x_label=x_label, y_label=y_label, x_values=xs,
+                y_values=np.array([lo.atof(y) for y in raw_ys]))
+
+
+def parse_input_single():
+    """This treats the first line as labels for the Xs and the Ys, and the
+    other lines as elements of each series."""
+
+    lines = (stripped for line in sys.stdin if (stripped := line.strip()))
+    x_label, y_label = shlex.split(next(lines))
     xs = []
     ys = []
-    for line in sys.stdin:
-        x, y = float((data:=line.strip().split())[0]),float(data[1])
-        xs.append(x)
-        ys.append(y)
-    return np.array(xs), np.array(ys)
+    for line in lines:
+        raw_x, raw_y = shlex.split(line)
+        xs.append(lo.atof(raw_x))
+        ys.append(lo.atof(raw_y))
+    return [Series(x_label, y_label, np.array(xs), np.array(ys))]
 
 
-def mk_exp(a, b):
-    return lambda x: math.exp(b) * math.exp(a*x)
+def graph_series(series: Series, models: Sequence[Regression]) -> tuple[plt.Figure, plt.Axes]:
+    fig, ax = plt.subplots()
+
+    ax.plot(series.x_values, series.y_values, label="Historic Data")
+    ax.set_xlabel(series.x_label)
+    ax.set_ylabel(series.y_label)
+
+    for model in models:
+        ax.plot(series.x_values, regr.at(series.x_values), label=regr.name)
+
+    ax.legend()
+    return fig, ax
 
 
-def main():
-    pass
+def main(models: list[str]=None, multiple: bool=False, locale: str=None, graph: bool=False):
+
+    models = MODELS if models is None else models
+    model_classes = (Models[model].value for model in models)
+
+    if locale is not None:
+        lo.setlocale(lo.LC_NUMERIC, locale)
+
+    for series in (parse_input_multiple if multiple else parse_input_single)():
+        regrs = [cls.from_series(series.x_values, series.y_values) for cls in model_classes]
+        print(regrs)
+        if graph:
+            fig, ax = graph_series(series, regrs)
+            fig.savefig(f"{series.y_label}.png")
+        
 
 if __name__ == "__main__":
     # xsel -ob | sed -e 's|\.||g' -e 's|^ *||g' | enumerate-from 2001 | fit
-    x, y = mk_data_arrays()
-    log_y = np.log(y)
-
-    a, b = np.polyfit(x, y, 1)
-    print("linear fit")
-    print(f"y={a}*x+{b}")
-    fx=lambda x: a*x+b
-    print("ratio:", f"{fx(2011)/fx(2010)-1:+.2%}")
-    print("2022:", fx(2022))
-    print()
-
-    a, b = np.polyfit(x, log_y, 1)
-    print("unweighted curve fit")
-    print(f"y={math.exp(b)}*EXP({a}*x)")
-    fx=mk_exp(a, b)
-    print("ratio:", f"{fx(2011)/fx(2010)-1:+.2%}")
-    print("2022:", fx(2022))
-    print()
-
-    a, b = np.polyfit(x, log_y, 1, w=np.sqrt(y))
-    print("weighted curve fit")
-    print(f"y=EXP({b})*EXP({a}*x)")
-    fx=mk_exp(a, b)
-    print("ratio:", f"{fx(2011)/fx(2010)-1:+.2%}")
-    print("2022:", fx(2022))
-    print()
+    main(**vars(get_args()))
 
