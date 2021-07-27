@@ -4,17 +4,28 @@
 import shutil
 import sys
 import os
+import pathlib
 
 
-def main(*files):
+def format_fname(fname: str) -> str:
+    return (fname
+        .lower()
+        .replace(" ", "-")
+        .replace("(", "")
+        .replace(")", "")
+        .replace("[", "")
+        .replace("]", ""))
+
+
+def main(*files: str) -> None:
     for file in files:
-        dir, base = os.path.split(file)
-        name = os.path.join(dir, base.lower().replace(" ", "-"))
 
-        if os.path.exists(name):
-            print(f"'{name}' already exists, skipping.", file=sys.stderr)
+        old_path = pathlib.Path(file)
+
+        if (new_path := old_path.parent / format_name(old_path.name)).exists():
+            print(f"'{new_path}' already exists, skipping.", file=sys.stderr)
         else:
-            shutil.move(file, name)
+            shutil.move(old_path, new_path)
 
 
 if __name__ == "__main__":

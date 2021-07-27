@@ -1,7 +1,5 @@
 #! /usr/bin/env bash
 
-# This is not sh compatible (i think) for now...
-
 
 printf "Color escapes are %s\n" '\e[${value};...;${value}m'
 printf "Values 30..37 are \e[33mforeground colors\e[m\n"
