@@ -6,8 +6,10 @@ import re
 import os
 
 
-def iter_segments(fd, regex):
-    pattern = re.compile(regex)
+from typing import TextIO
+
+
+def iter_segments(fd: TextIO, regex: re.Pattern) -> Iterator[list[str]]:
     lines = []
     for line in fd:
         if not pattern.match(line):
@@ -19,9 +21,10 @@ def iter_segments(fd, regex):
 
 
 
-def main(regex, big_file, out_format="{i:0=3d}"):
+def main(regex: str, big_file: str, out_format: str="{i:0=3d}") -> None:
     with open(big_file) as src:
-        for i, lines in enumerate(iter_segments(src, regex)):
+        pattern = re.compile(regex)
+        for i, lines in enumerate(iter_segments(src, pattern)):
             with open(out_format.format(i=i), "w") as dst:
                 dst.writelines(lines)
 
