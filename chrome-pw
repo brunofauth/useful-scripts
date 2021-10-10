@@ -17,9 +17,8 @@ PATH = {
 
 def iter_data():
 
-    filter_user = lambda url, user, pw: user
     connection = sqlite3.connect(PATH[sys.platform])
-    data = filter(filter_user, connection.execute(CMD).fetchall())
+    data = (row for row in connection.execute(CMD).fetchall() if row[1])
 
     if sys.platform == "win32":
         from win32crypt import CryptUnprotectData
