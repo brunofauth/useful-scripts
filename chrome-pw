@@ -8,25 +8,24 @@ import os
 
 CMD = "SELECT action_url, username_value, password_value FROM logins"
 
-PATHS = {
-    "linux": os.path.expanduser(r"~/.config/chromium/Default/Login Data")
-    "win32": os.environ["LOCALAPPDATA"] + r"\Google\Chrome\User Data\Default\Login Data",
-    "darwin": os.path.expandvars(r"~/Library/Application Support/Google/Chrome/Default/Login Data"),
+PATH = {
+    "linux": os.path.expanduser("~/.config/chromium/Default/Login Data"),
+    "win32": os.environ.get("LOCALAPPDATA", "") + r"\Google\Chrome\User Data\Default\Login Data",
+    "darwin": os.path.expanduser("~/Library/Application Support/Google/Chrome/Default/Login Data"),
 }
 
 
 def iter_data():
 
-    if sys.platform == "win32":
-        import win32crypt
-        pw_func = lambda x: win32crypt.CryptUnprotectData(x)[1]
-    else:
-        pw_func = lambda x: x
+    filter_user = lambda url, user, pw: user
+    connection = sqlite3.connect(PATH[sys.platform])
+    data = filter(filter_user, connection.execute(CMD).fetchall())
 
-    connection = sqlite3.connect(PATHS[sys.platform]())
-    for url, user, pw in connection.execute(CMD).fetchall():
-        if user:
-            yield url, user, pw_func(pw)
+    if sys.platform == "win32":
+        from win32crypt import CryptUnprotectData
+        data = ((url, user, CryptUnprotectData(pw)[1]) for url, user, pw in data)
+
+    yield from data
 
 
 def main():
