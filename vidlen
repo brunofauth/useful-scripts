@@ -1,7 +1,55 @@
 #! /bin/sh
 
 
+USAGE="
+SYNOPSYS
+    ${0##*/} [options] [files...]
+
+DESCRIPTION
+    Print the durations of given videos.
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits.
+
+    -H --human
+        Display durations in sexagesimal format (HH:MM:SS).
+
+NOTE
+    If the names of your files conflict with those of the flags, put them
+    after a double dash (--), like this:
+        ${0##*/} -- --help
+"
+
+fatal() {
+    >&2 echo "$@"
+    exit 1
+}
+
+
+args="$(getopt -o "hH" -l "help,human" -n "vidlen" -- "$@")" \
+    || fatal "Error parsing arguments!"
+eval set -- "$args"
+
+while true; do
+    case "$1" in
+        '-h'|'--help')
+            echo "$USAGE"
+            exit 0
+            ;;
+        '-H'|'--human')
+            FFPROBE_FLAGS="$FFPROBE_FLAGS -sexagesimal"
+            shift
+            ;;
+        '--')
+            shift
+            break
+            ;;
+    esac
+done
+
+
 for video in "$@"; do
-    ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -sexagesimal "$video"
+    ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $FFPROBE_FLAGS "$video"
 done
 
