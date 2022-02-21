@@ -1,0 +1,14 @@
+#! /bin/sh
+
+
+lsvid_single_target() {
+    for file in $(ls "$1" | grep '\(mkv\|mp4\|avi\)$'); do
+        printf "%s\t%s\n" "$(vidlen "$file")" "$file"
+    done
+}
+
+
+for entry in "$@"; do
+    lsvid_single_target "$entry"
+done
+
