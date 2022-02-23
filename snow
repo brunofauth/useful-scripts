@@ -4,7 +4,5 @@
 find "$@" -type f -print0 \
     | sort -z \
     | fzf -e -i -m --read0 --print0 \
-    | xargs -r0L 1 -I {} sh -c "xdg-open '{}' >/dev/null 2>&1 &"
-#   | parallel -0r -P 0 --bg xdg-open
-#   | xargs -r0L 1 -P 0 xdg-open 
+    | xargs -r0L1 detach xdg-open
 
