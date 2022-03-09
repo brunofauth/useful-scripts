@@ -3,6 +3,9 @@
 
 man -k . \
     | sed 's|\(\S\+\)\s\+(\(\S\+\)).\+|\2\t\t\1|' \
-    | fzf -i --exact --info=inline --header="Shift + Up/Down to scroll. ESC to quit." --preview "man '{}'" \
+    | fzf \
+        -i --exact --cycle \
+        --info=inline --header="Shift + Up/Down to scroll. ESC to quit." \
+        --preview "man '{}'" \
     | xargs -r man
 

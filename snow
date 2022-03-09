@@ -3,6 +3,9 @@
 
 find "$@" -type f -print0 \
     | sort -z \
-    | fzf -e -i -m --read0 --print0 \
+    | fzf \
+        --exact -i --multi \
+        --read0 --print0 \
+        --info=inline --header="Open files from '$*'" \
     | xargs -r0L1 detach xdg-open
 
