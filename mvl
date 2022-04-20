@@ -10,7 +10,7 @@ if [ $# -gt 0 ]; then
         printf '%s\n' "$@" > "$src_files"
     fi
 else
-    ls > "$src_files"
+    ls | sed 's|/$||' > "$src_files"
 fi
 
 
@@ -27,7 +27,7 @@ cat "$src_files" \
 
 
 while read -r src <&3 && read -r dst <&4; do
-    if [ -f "$dst" ]; then
+    if [ -e "$dst" ]; then
         >&2 echo "DST file '$dst' already exists. Skipping..."
     else
         mv -vi "$src" "$dst"
