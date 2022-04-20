@@ -6,6 +6,6 @@ find "$@" -type f -print0 \
     | fzf \
         --exact -i --multi \
         --read0 --print0 \
-        --info=inline --header="Open files from '$*'" \
+        --info=inline --header="Open files from: ${*:-"$(pwd)"}" \
     | xargs -r0L1 detach xdg-open
 

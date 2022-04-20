@@ -53,4 +53,5 @@ if [ ! -t 1 ]; then
     fi
 else
     echo "$msg"
+    exit $ret
 fi
