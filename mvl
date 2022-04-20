@@ -1,0 +1,36 @@
+#! /bin/sh
+
+
+src_files="$(mktemp mvl.XXXXXXXXXX --tmpdir)"
+
+if [ $# -gt 0 ]; then
+    if [ "$1" = '-' ]; then
+        cat > "$src_files"
+    else
+        printf '%s\n' "$@" > "$src_files"
+    fi
+else
+    ls > "$src_files"
+fi
+
+
+dst_files="$(mktemp mvl.XXXXXXXXXX --tmpdir)"
+
+cat "$src_files" \
+    | tr \
+        "[:upper:][:blank:]" \
+        "[:lower:]-" \
+    | tr \
+        --delete "(){}'\"~^" \
+    | iconv -f utf8 -t ascii//TRANSLIT \
+    > "$dst_files"
+
+
+while read -r src <&3 && read -r dst <&4; do
+    if [ -f "$dst" ]; then
+        >&2 echo "DST file '$dst' already exists. Skipping..."
+    else
+        mv -vi "$src" "$dst"
+    fi
+done 3<"$src_files" 4<"$dst_files"
+
