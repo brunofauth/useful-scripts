@@ -87,6 +87,7 @@ ls_flags=""
 
 if [ $# -eq 0 ]; then
     # Maybe this 'ls' should be 'find'
+    # shellcheck disable=SC2086
     ls $ls_flags >> "$src_files"
 else
     printf "%s\n" "$@" >> "$src_files"
