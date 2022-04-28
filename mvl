@@ -79,3 +79,5 @@ while read -r src <&3 && read -r dst <&4; do
     fi
 done 3<"$src_files" 4<"$dst_files"
 
+rm "$src_files" "$dst_files"
+

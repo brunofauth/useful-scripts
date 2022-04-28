@@ -115,6 +115,7 @@ while read -r src <&3 && read -r dst <&4; do
         && echo "'$DO_CMD' -vi '$src' '$dst'" >> "$cmd_list"
 done 3<"$src_files" 4<"$dst_files"
 
+rm "$src_files" "$dst_files"
 [ "$(wc -l < "$cmd_list")" -lt 2 ] && fatal "No name changed. Exiting."
 
 </dev/tty "${EDITOR:-vim}" "$cmd_list"
@@ -132,4 +133,6 @@ while read -r line; do
     eval "$line"
 done < "$cmd_list"
 # < "$cmd_list" xargs -rI '{}' sh -c '{}'
+
+rm "$cmd_list"
 
