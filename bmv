@@ -110,6 +110,8 @@ sed -Ei '/^[[:space:]]*#/d' "$dst_files"
 cmd_list="$(mktemp bmv-cmd.XXXXXXXXXX --tmpdir)"
 echo "# The following commands will be executed" >> "$cmd_list"
 
+# Can't use comm here because it requires sorted files and
+# it outputs each set of lines in a lexicographically sorted way
 while read -r src <&3 && read -r dst <&4; do
     [ "$src" != "$dst" ] \
         && echo "'$DO_CMD' -vi '$src' '$dst'" >> "$cmd_list"
@@ -126,13 +128,6 @@ if [ "$DO_LOG" = "1" ]; then
    echo "Logged 'cmd_list' to 'bmv.log'"
 fi
 
-# I'd rather not use a while loop here, but xargs was giving me
-# errors when trying to mv files with spaces, even though they're
-# surrounded by simple quotation marks.
-while read -r line; do
-    eval "$line"
-done < "$cmd_list"
-# < "$cmd_list" xargs -rI '{}' sh -c '{}'
-
+. "$cmd_list"
 rm "$cmd_list"
 
