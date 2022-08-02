@@ -121,7 +121,7 @@ sync_dir() {
             d*) diff "$src/$common_file" "$dst/$common_file" | "${PAGER:-less}";;
             *) ;;
         esac
-        case "$(prompt_choice "Restore/Update/Ignore" "rui" "i")" in
+        case "$(prompt_choice "Restore from SRC/Update SRC/Ignore" "rui" "i")" in
             r*) cp "$src/$common_file" "$dst";;
             u*) cp "$dst/$common_file" "$src";;
             i*) ;;
