@@ -53,8 +53,8 @@ for prog in "$@"; do
             
             if sxhkd_pid="$(pidof sxhkd)"; then
                 kill -9 "$sxhkd_pid"
-                sxhkd &
             fi
+            sxhkd &
 
             echo "Updated sxhkd."
             ;;
