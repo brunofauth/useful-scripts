@@ -14,7 +14,7 @@ choose() {
     if [ $in_terminal = 0 ]; then
         echo "$choices" | fzf -e -i --prompt="$1 "
     else
-        echo "$choices" | rofi -dmenu -i -p "$1"
+        echo "$choices" | rofi -theme theme.rasi -dmenu -i -p "$1"
     fi
 }
 
@@ -53,4 +53,5 @@ if [ ! -t 1 ]; then
     fi
 else
     echo "$msg"
+    exit $ret
 fi

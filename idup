@@ -1,0 +1,163 @@
+#! /bin/sh
+# Interactive Dotfile UPdater
+
+
+DOTS_CFG_ROOT="${DOTFILES:-$HOME/dots}/general/.config"
+HOME_CFG_ROOT="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+
+# (msg: str, valid_chars: str)
+prompt_choice() {
+    local msg="$1"
+    local valid_chars="$2"
+    local default_val="$3"
+
+    while true; do
+        >&2 echo -n "$msg (one of '$valid_chars' [defaults to '$default_val']): "
+        >&2 read -r response
+        if [ -z "$response" ]; then
+            echo "$default_val"
+            return
+        fi
+        if echo "$valid_chars" | grep --quiet "$response"; then
+            echo "$response"
+            return
+        fi
+        >&2 printf "Invalid response: '%s'. Try again.\n" "$response"
+    done
+}
+
+
+# (src_root: str, dst_root: str, dirname: str)
+sync_dir() {
+    local src="$1"
+    local dst="$2"
+    IFS="
+    "
+
+    # First we sync the subfolders in these directories
+    local f_src_children="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    find "$src" -maxdepth 1 -type d -printf '%P\n' | sort > "$f_src_children"
+
+    local f_dst_children="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    find "$dst" -maxdepth 1 -type d -printf '%P\n' | sort > "$f_dst_children"
+
+    for only_in_src in $(comm -23 "$f_src_children" "$f_dst_children"); do
+        >&2 echo "Subdirectory '$only_in_src' is missing in DST ('$dst')"
+        case "$(prompt_choice "Peek into this directory?" "yn" "n")" in
+            y*) ls "${src:?}/$only_in_src" | "${PAGER:-less}";;
+            *) ;;
+        esac
+        case "$(prompt_choice "Create/Ignore/Remove" "cir" "i")" in
+            c*) mkdir "$dst/$only_in_src"; sync_dir "$src/$only_in_src" "$dst/$only_in_src" ;;
+            r*) rm -rf "${src:?}/$only_in_src" ;;
+            i*) ;;
+            *) >&2 echo "Got invalid response" ;;
+        esac
+    done
+
+    for only_in_dst in $(comm -13 "$f_src_children" "$f_dst_children"); do
+        >&2 echo "Subdirectory '$only_in_dst' is missing in SRC ('$src')"
+        case "$(prompt_choice "Peek into this directory?" "yn" "n")" in
+            y*) ls "${dst:?}/$only_in_dst" | "${PAGER:-less}";;
+            *) ;;
+        esac
+        case "$(prompt_choice "Create/Ignore/Remove" "cir" "i")" in
+            c*) mkdir "${src:?}/$only_in_dst"; sync_dir "$src/$only_in_dst" "$dst/$only_in_dst" ;;
+            r*) rm -rf "${dst:?}/$only_in_dst" ;;
+            i*) ;;
+            *) >&2 echo "Got invalid response" ;;
+        esac
+    done
+
+    for common_dir in $(comm -12 "$f_src_children" "$f_dst_children"); do
+        sync_dir "$src/$common_dir" "$dst/$common_dir"
+    done
+
+    rm "$f_src_children" "$f_dst_children"
+
+    # And then we sync the file contents of the same directories
+    local f_files_in_src="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    find "$src" -maxdepth 1 -type f -printf '%P\n' | sort > "$f_files_in_src"
+
+    local f_files_in_dst="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    find "$dst" -maxdepth 1 -type f -printf '%P\n' | sort > "$f_files_in_dst"
+
+    for only_in_src in $(comm -23 "$f_files_in_src" "$f_files_in_dst"); do
+        >&2 echo "File '$only_in_src' only exists in SRC ('$src')"
+        case "$(prompt_choice "Peek into the file?" "yn" "n")" in
+            y*) "${PAGER:-less}" "${src:?}/$only_in_src";;
+            *) ;;
+        esac
+        case "$(prompt_choice "Copy/Ignore" "cpi" "i")" in
+            c*) cp "${src:?}/$only_in_src" "$dst" ;;
+            i*) ;;
+            *) >&2 echo "Got invalid response" ;;
+        esac
+    done
+
+    for only_in_dst in $(comm -13 "$f_files_in_src" "$f_files_in_dst"); do
+        >&2 echo "File '$only_in_dst' only exists in DST ('$dst')"
+        case "$(prompt_choice "Peek into the file?" "yn" "n")" in
+            y*) "${PAGER:-less}" "${dst:?}/$only_in_dst";;
+            *) ;;
+        esac
+        case "$(prompt_choice "Copy/Delete/Ignore" "cdi" "i")" in
+            c*) cp "${dst:?}/$only_in_dst" "$src" ;;
+            d*) rm "${dst:?}/$only_in_dst";;
+            i*) ;;
+            *) >&2 echo "Got invalid response" ;;
+        esac
+    done
+
+    for common_file in $(comm -12 "$f_files_in_src" "$f_files_in_dst"); do
+        if diff --brief "$src/$common_file" "$dst/$common_file" >/dev/null 2>&1; then
+            continue
+        fi
+        >&2 echo "Different versions of '$common_file' exist in SRC ('$src') and DST ('$dst')"
+        case "$(prompt_choice "Peek into files? (1st/2nd/Diff/None)" "12dn" "n")" in
+            1*) "${PAGER:-less}" "$src/$common_file";;
+            2*) "${PAGER:-less}" "$dst/$common_file";;
+            d*) diff "$src/$common_file" "$dst/$common_file" | "${PAGER:-less}";;
+            *) ;;
+        esac
+        case "$(prompt_choice "Restore/Update/Ignore" "rui" "i")" in
+            r*) cp "$src/$common_file" "$dst";;
+            u*) cp "$dst/$common_file" "$src";;
+            i*) ;;
+            *) >&2 echo "Got invalid response" ;;
+        esac
+    done
+
+    rm "$f_files_in_src" "$f_files_in_dst"
+}
+
+
+main() {
+    IFS="
+    "
+    for dir_to_sync; do
+        src="$DOTS_CFG_ROOT/$dir_to_sync"
+        dst="$HOME_CFG_ROOT/$dir_to_sync"
+
+        if ! [ -d "$src" ]; then
+            >&2 echo "'$dir_to_sync' doesn't exist in SRC ('$src'). Skipping"
+            continue
+        fi
+        if ! [ -d "$dst" ]; then
+            >&2 echo "'$dir_to_sync' doesn't exist in DST ('$dst'). Skipping"
+            continue
+        fi
+
+        sync_dir "$DOTS_CFG_ROOT/$dir_to_sync" "$HOME_CFG_ROOT/$dir_to_sync"
+    done
+}
+
+
+if [ $# -lt 1 ]; then
+    echo "unsupported"
+    exit 1
+    set -- "$(find "$DOTS_CFG_ROOT" -maxdepth 1 -printf '%P\n')"
+fi
+main "$@"
+

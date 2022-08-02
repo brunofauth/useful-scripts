@@ -1,8 +1,0 @@
-#! /usr/bin/env sh
-
-if [ "$1" = "-r" ]; then
-    fortune -s | xargs -0 figlet | cowsay -nf "$(ls /usr/share/cows/ | shuf -n1)" | lolcat
-else
-    fortune -s | xargs -0 figlet | cowsay -n | lolcat
-fi
-

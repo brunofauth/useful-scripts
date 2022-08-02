@@ -17,15 +17,17 @@ def format_fname(fname: str) -> str:
         .replace("]", ""))
 
 
-def main(*files: str) -> None:
+def main(*files: str, verbose=True) -> None:
     for file in files:
 
         old_path = pathlib.Path(file)
 
-        if (new_path := old_path.parent / format_name(old_path.name)).exists():
+        if (new_path := old_path.parent / format_fname(old_path.name)).exists():
             print(f"'{new_path}' already exists, skipping.", file=sys.stderr)
         else:
             shutil.move(old_path, new_path)
+            if verbose:
+                print(f'"{old_path}" -> "{new_path}"')
 
 
 if __name__ == "__main__":

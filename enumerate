@@ -5,7 +5,7 @@ import argparse as ap
 import sys
 
 
-def get_args():
+def get_args() -> ap.Namespace:
     parser = ap.ArgumentParser(description="Enumerate lines piped into stdin.")
 
     parser.add_argument("-n", "--start-number", default=0, dest="n", type=int,
@@ -16,21 +16,21 @@ def get_args():
         dest="step", help="Step, like in range()")
     parser.add_argument("-s", "--separator", default=" ", type=str,
         dest="sep", help="Separates the number from the rest of the line.")
+    parser.add_argument("-f", "--format", default="0=3d", type=str,
+        dest="fmt", help="How to format the output enumeration number.")
 
     return parser.parse_args()
 
 
-def main(n: int=0, skip_empty: bool=False, step: int=1, sep: str=" ") -> None:
+def main(n: int=0, skip_empty: bool=False, step: int=1, sep: str=" ", fmt: str="0=3d") -> None:
     for line in sys.stdin:
-        if line.strip():
-            sys.stdout.write(f"{n}{sep}{line}")
+        if not line.isspace():
+            sys.stdout.write(f"{n:{fmt}}{sep}{line}")
         elif skip_empty:
             continue
         n += step
 
 
 if __name__ == "__main__":
-    a = vars(get_args())
-    print(a)
-    main(**a)
+    main(**vars(get_args()))
 

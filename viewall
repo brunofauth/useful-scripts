@@ -1,7 +1,7 @@
 #! /usr/bin/sh
 
 
-cd "$(mktemp -d)"
+cd "$(mktemp viewall.XXXXXXXXXX -d --tmpdir)"
 original_window="$(xdotool getwindowfocus)"
 
 for window_id in $(wmctrl -l | awk '{print $1}'); do

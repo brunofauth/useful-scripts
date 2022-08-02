@@ -11,13 +11,16 @@ DESCRIPTION
 
 OPTIONS
     -h, --help
-        Displays this usage information and exits.
+        Displays this usage information and exits
 
     -c, --copy
         Copies files, instead of moving them
 
     -d --dotfiles
         Do not ignore files prefixed with a '.'
+
+    -t --time
+        Sort files by time of creation; newest first
 
 NOTE
     If the names of your files conflict with those of the flags, put them
@@ -36,9 +39,10 @@ fatal() {
 DO_CMD="mv"
 DO_LOG=0
 DO_DOT=0
+DO_SORT_BY_TIME=0
 
 
-args="$(getopt -o "hcld" -l "help,copy,log,dotfiles" -n "bmv" -- "$@")" \
+args="$(getopt -o "hcldt" -l "help,copy,log,dotfiles,time" -n "bmv" -- "$@")" \
     || fatal "Error parsing arguments!"
 eval set -- "$args"
 
@@ -60,6 +64,10 @@ while true; do
             DO_DOT=1
             shift
             ;;
+        '-t'|'--time')
+            DO_SORT_BY_TIME=1
+            shift
+            ;;
         '--')
             shift
             break
@@ -68,39 +76,51 @@ while true; do
 done
 
 
-src_files="$(mktemp)"
+src_files="$(mktemp bmv-src.XXXXXXXXXX --tmpdir)"
 ls_flags=""
 [ "$DO_DOT" = 1 ] && ls_flags="$ls_flags -a"
+[ "$DO_SORT_BY_TIME" = 1 ] && ls_flags="$ls_flags -t"
 
-if [ $# -eq 0 ]; then
-    ls $ls_flags >> "$src_files"
+
+# Read names from stdin, each one a line, if anything is piped
+if ! [ -t 0 ]; then
+    cat >> "$src_files"
 else
-    printf "%s\n" "$@" >> "$src_files"
+    if [ $# -eq 0 ]; then
+        # Maybe this 'ls' should be 'find'
+        # shellcheck disable=SC2086
+        ls $ls_flags >> "$src_files"
+    else
+        printf "%s\n" "$@" >> "$src_files"
+    fi
 fi
 
 
-dst_files="$(mktemp)"
+dst_files="$(mktemp bmv-dst.XXXXXXXXXX --tmpdir)"
 echo "# Rename your files, save and quit" >> "$dst_files"
 cat "$src_files" >> "$dst_files"
 
-"${EDITOR:-vim}" "$dst_files"
+</dev/tty "${EDITOR:-vim}" "$dst_files"
 sed -Ei '/^[[:space:]]*#/d' "$dst_files"
 
 [ "$(wc -l < "$src_files")" -ne "$(wc -l < "$dst_files")" ] \
     && fatal "Unmatching ammount of names. Exiting."
 
 
-cmd_list="$(mktemp)"
+cmd_list="$(mktemp bmv-cmd.XXXXXXXXXX --tmpdir)"
 echo "# The following commands will be executed" >> "$cmd_list"
 
+# Can't use comm here because it requires sorted files and
+# it outputs each set of lines in a lexicographically sorted way
 while read -r src <&3 && read -r dst <&4; do
     [ "$src" != "$dst" ] \
         && echo "'$DO_CMD' -vi '$src' '$dst'" >> "$cmd_list"
 done 3<"$src_files" 4<"$dst_files"
 
+rm "$src_files" "$dst_files"
 [ "$(wc -l < "$cmd_list")" -lt 2 ] && fatal "No name changed. Exiting."
 
-"${EDITOR:-vim}" "$cmd_list"
+</dev/tty "${EDITOR:-vim}" "$cmd_list"
 sed -Ei '/^[[:space:]]*#/d' "$cmd_list"
 
 if [ "$DO_LOG" = "1" ]; then
@@ -108,11 +128,6 @@ if [ "$DO_LOG" = "1" ]; then
    echo "Logged 'cmd_list' to 'bmv.log'"
 fi
 
-# I'd rather not use a while loop here, but xargs was giving me
-# errors when trying to mv files with spaces, even though they're
-# surrounded by simple quotation marks.
-while read -r line; do
-    eval "$line"
-done < "$cmd_list"
-# < "$cmd_list" xargs -rI '{}' sh -c '{}'
+. "$cmd_list"
+rm "$cmd_list"
 

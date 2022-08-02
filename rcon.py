@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+from __future__ import annotations
+
 import contextlib as cl
 import aiomcrcon as rc
 import asyncio as aio
@@ -8,15 +10,19 @@ import fire
 import sys
 import os
 
+from typing import Callable
 
-def supports_color():
+
+def supports_color() -> bool:
     plat = sys.platform
     valid_plat = plat != 'Pocket PC' and (plat != 'win32' or 'ANSICON' in os.environ)
     is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
-    return supported_platform and is_a_tty
+    return valid_plat and is_a_tty
 
 
-def alt_codes_to_ansi(string):
+OutputFormatter = Callable[[str], str]
+
+def alt_codes_to_ansi(string: str) -> str:
     # Ugly, but faster than looping through a dict
     return (string
         .replace("§0", "\033[30m") # Black
@@ -44,7 +50,7 @@ def alt_codes_to_ansi(string):
     ) + "\033[0m"
 
 
-def strip_alt_codes(string):
+def strip_alt_codes(string: str) -> str:
     it = iter(string)
     return "".join(c for c in it if c != "§" or (next(it) and False))
 
@@ -64,19 +70,18 @@ async def get_client(*args, **kwargs):
         await client.close()
 
 
-async def rcon_loop(host, port=25575):
+async def rcon_loop(output_formatter: OutputFormatter, host: str, port: int=25575) -> None:
     ip = f"{host}:{port}"
-    pw = os.environ.get("MC_RCON_PW", None) or gp.getpass()
+    pw = os.environ.get("MC_RCON_PW", gp.getpass())
     async with get_client(ip, pw) as client:
         await client.setup()
         for line in iter(lambda: input(">>> "), "quit"):
-            print( format_output((await client.send_cmd(line))[0]) )
+            print( output_formatter((await client.send_cmd(line))[0]) )
 
 
-def main(host, port=25575, no_ansi=False):
-    global format_output
+def main(host: str, port: int=25575, no_ansi: bool=False) -> None:
     format_output = strip_alt_codes if no_ansi else alt_codes_to_ansi
-    aio.run(rcon_loop(host, port))
+    aio.run(rcon_loop(format_output, host, port))
 
 
 if __name__ == "__main__":

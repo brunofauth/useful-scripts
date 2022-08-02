@@ -5,7 +5,7 @@ emoji_file="${XDG_DATA_HOME:-$HOME/.local/share}/emoji"
 [ -f "$emoji_file" ] || { >&2 echo "No emoji source" && exit 1; }
 
 
-chosen=$(rofi -multi-select -dmenu -i -p "Pick emojies" -input "$emoji_file")
+chosen=$(rofi -dmenu -multi-select -i -p "Pick emojies" -input "$emoji_file")
 [ -z "$chosen" ] && exit
 
 

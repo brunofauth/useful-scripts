@@ -1,7 +1,7 @@
 #! /usr/bin/sh
 
 
-file=$(mktemp)
+file=$(mktemp procsub.XXXXXXXXXX --tmpdir)
 cat >> "$file"
 echo "$file"
 

@@ -1,4 +1,11 @@
 #! /bin/sh
 
-man -k . | fzf -e -i | cut -d ' ' -f1 | xargs -r man
+
+man -k . \
+    | sed 's|\(\S\+\)\s\+(\(\S\+\)).\+|\2\t\t\1|' \
+    | fzf \
+        -i --exact --cycle \
+        --info=inline --header="Shift + Up/Down to scroll. ESC to quit." \
+        --preview "man '{}'" \
+    | xargs -r man
 

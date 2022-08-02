@@ -1,7 +1,7 @@
 #! /usr/bin/env sh
 
 
-[ -d "$DOTFILES" ] || { >&2 echo '"Aborting.' && exit 1; }
+[ -d "$DOTFILES" ] || { >&2 echo '$DOTFILES is not defined. Aborting.' && exit 1; }
 
 
 cd "$DOTFILES/general"
