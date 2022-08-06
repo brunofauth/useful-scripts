@@ -1,7 +1,7 @@
 #! /bin/sh
 
 
-notify-error() {
+notify_error() {
     notify-send \
         --expire-time=5000 \
         --icon=dialog-error \
@@ -10,7 +10,7 @@ notify-error() {
 }
 
 
-notify-launch() {
+notify_launch() {
     notify-send \
         --expire-time=5000 \
         --icon=preferences-desktop-launch-feedback \
@@ -20,14 +20,10 @@ notify-launch() {
 
 
 if ! which "$1" >/dev/null 2>&1; then
-    notify-error "'detach' util not found!" "Please install 'detach from the AUR'"
-    exit 1
-elif ! which "$1" >/dev/null 2>&1; then
-    notify-error "Error opening '$1'" "No '$1' in <i>\$PATH</i>"
+    notify_error "Error opening '$1'" "No '$1' in <i>\$PATH</i>"
     exit 1
 else
-    notify-launch "Launching '$1'"
-    detach "$@"
-    exit 0
+    notify_launch "Launching '$1'"
+    exec "$@" &
 fi
 
