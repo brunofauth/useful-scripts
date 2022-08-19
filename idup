@@ -1,30 +1,58 @@
 #! /bin/sh
 # Interactive Dotfile UPdater
 
+# This is irrelevant because even Dash implements 'local'
+# shellcheck disable=SC3043
 
-DOTS_CFG_ROOT="${DOTFILES:-$HOME/dots}/general/.config"
-HOME_CFG_ROOT="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+readonly DOTS_CFG_ROOT="${DOTFILES:-$HOME/dots}/general/.config"
+readonly HOME_CFG_ROOT="${XDG_CONFIG_HOME:-$HOME/.config}"
+readonly CR="$(printf '\r')"
 
 
-# (msg: str, valid_chars: str)
-prompt_choice() {
+# (msg: str, valid_chars: str, default_val: str)
+_prompt_choice() {
     local msg="$1"
     local valid_chars="$2"
     local default_val="$3"
 
     while true; do
-        >&2 echo -n "$msg (one of '$valid_chars' [defaults to '$default_val']): "
-        >&2 read -r response
-        if [ -z "$response" ]; then
+        >&2 printf \
+            "%s (one of '%s' [defaults to '%s']):\r\n" \
+            "$msg" "$valid_chars" "$default_val"
+
+        local response
+        response=$(head -c 1)
+
+        if [ "$response" = "$CR" ]; then
             echo "$default_val"
             return
         fi
+
         if echo "$valid_chars" | grep --quiet "$response"; then
             echo "$response"
             return
         fi
-        >&2 printf "Invalid response: '%s'. Try again.\n" "$response"
+        >&2 printf "Invalid response: '%s'. Try again.\r\n" "$response"
     done
+}
+
+
+# (msg: str, valid_chars: str, default_val: str)
+prompt_choice() {
+    local msg="$1"
+    local valid_chars="$2"
+    local default_val="$3"
+
+    local old_stty_cfg
+    old_stty_cfg=$(stty -g)
+    stty raw -echo isig
+
+    local ret
+    ret="$(_prompt_choice "$msg" "$valid_chars" "$default_val")"
+
+    stty "$old_stty_cfg"
+    echo "$ret"
 }
 
 
@@ -137,8 +165,8 @@ main() {
     IFS="
     "
     for dir_to_sync; do
-        src="$DOTS_CFG_ROOT/$dir_to_sync"
-        dst="$HOME_CFG_ROOT/$dir_to_sync"
+        local src="$DOTS_CFG_ROOT/$dir_to_sync"
+        local dst="$HOME_CFG_ROOT/$dir_to_sync"
 
         if ! [ -d "$src" ]; then
             >&2 echo "'$dir_to_sync' doesn't exist in SRC ('$src'). Skipping"
@@ -155,7 +183,7 @@ main() {
 
 
 if [ $# -lt 1 ]; then
-    echo "unsupported"
+    >&2 echo "Usage: idup <folders-to-update...>"
     exit 1
     set -- "$(find "$DOTS_CFG_ROOT" -maxdepth 1 -printf '%P\n')"
 fi
