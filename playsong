@@ -1,0 +1,11 @@
+#! /bin/sh
+
+
+mpc list title \
+    | dmenu -i \
+    | tr '\n' '\0' \
+    | sed 's|"|_UNSUPPORTED_CHAR_DOUBLE_QUOTE_|g' \
+    | xargs -r0I {} sh -c 'mpc findadd title "{}" && mpc searchplay "{}"'
+
+    # | sed -e "s|'|\\\'|g" -e "s|)|\\\)|g" \
+
