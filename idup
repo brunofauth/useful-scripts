@@ -82,6 +82,7 @@ sync_dir() {
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
+        printf '\n'
     done
 
     for only_in_dst in $(comm -13 "$f_src_children" "$f_dst_children"); do
@@ -96,6 +97,7 @@ sync_dir() {
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
+        printf '\n'
     done
 
     for common_dir in $(comm -12 "$f_src_children" "$f_dst_children"); do
@@ -122,6 +124,7 @@ sync_dir() {
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
+        printf '\n'
     done
 
     for only_in_dst in $(comm -13 "$f_files_in_src" "$f_files_in_dst"); do
@@ -136,6 +139,7 @@ sync_dir() {
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
+        printf '\n'
     done
 
     for common_file in $(comm -12 "$f_files_in_src" "$f_files_in_dst"); do
@@ -162,6 +166,7 @@ sync_dir() {
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
+        printf '\n'
     done
 
     rm "$f_files_in_src" "$f_files_in_dst"
