@@ -1,11 +1,20 @@
 #! /bin/sh
 
 
-mpc list title \
-    | dmenu -i \
-    | tr '\n' '\0' \
-    | sed 's|"|_UNSUPPORTED_CHAR_DOUBLE_QUOTE_|g' \
-    | xargs -r0I {} sh -c 'mpc findadd title "{}" && mpc searchplay "{}"'
+song_name="$( \
+    mpc list title \
+        | shuf \
+        | dmenu -i \
+        | tr '\n' '\0' \
+        | sed 's|"|_UNSUPPORTED_CHAR_DOUBLE_QUOTE_|g' \
+)"
 
-    # | sed -e "s|'|\\\'|g" -e "s|)|\\\)|g" \
+
+if mpc searchplay title "$song_name"; then
+    exit 0
+elif mpc findadd title "$song_name"; then
+    mpc searchplay title "$song_name"
+else
+    notify-send -t 3000 "Song not Found!" "$song_name"
+fi
 

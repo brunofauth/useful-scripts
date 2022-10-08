@@ -1,0 +1,35 @@
+#! /bin/sh
+
+
+song_list="$(mktemp songdl.XXXXXXXXXX --tmpdir)"
+
+if [ -t 0 ]; then
+    echo "# Write song names to query and download" > "$song_list"
+    editor="${EDITOR:-vim}" 
+    which "$editor" >/dev/null 2>&1 ||exit 1
+    "$editor" "$song_list"
+    sed -Ei '/^[[:space:]]*#/d' "$song_list"
+
+elif [ -p /dev/stdin ]; then
+    cat > "$song_list"
+
+else
+    >&2 echo "Stdin isn't coming from terminal or pipe"
+    exit 1
+fi
+
+printf 'Read %s song entries. Processing...' "$(wc -l "$song_list")"
+
+
+music_dir="${XDG_MUSIC_DIR:-$HOME/song}"
+[ -d "$music_dir" ] || mkdir -p "$music_dir"
+
+<"$song_list" xargs -rI {} -P5 \
+    spotdl --output "$music_dir" --output-format m4a "{}"
+ret_code=$?
+
+rm "$song_list"
+[ "$ret_code" -eq 0 ] || exit 1
+
+mpc update
+
