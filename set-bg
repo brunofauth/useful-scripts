@@ -1,0 +1,7 @@
+#! /bin/sh
+
+
+wallpapers="/usr/share/backgrounds/"
+
+find "$wallpapers" | sxiv -to - | xargs -r xwallpaper --zoom
+
