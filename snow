@@ -1,11 +1,17 @@
 #! /usr/bin/sh
 
 
-find "$@" -type f -print0 \
+find "$@" -path '*/.*' -prune -or -type f -print0 \
     | sort -z \
     | fzf \
         --exact -i --multi \
         --read0 --print0 \
-        --info=inline --header="Open files from: ${*:-"$(pwd)"}" \
-    | xargs -r0L1 detach xdg-open
+        --info=inline --header="Open files from: ${*:-"$(pwd)"}
+(Shift-)Tab to (de)select  |  Ctrl + ([V]im | [P]ager | [O]pen)" --header-first \
+        --preview='bat --color always --wrap character --style="numbers" {}' \
+        --bind="\
+ctrl-v:become(${EDITOR:-vim} -p {+}),\
+ctrl-o:become(echo {+} | xargs --max-args=1 detach xdg-open),\
+ctrl-p:execute(echo {+} | xargs --max-args=1 bat --paging=always --style=numbers)+clear-selection,\
+enter:ignore" 
 

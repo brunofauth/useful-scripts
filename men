@@ -4,8 +4,8 @@
 man -k . \
     | sed 's|\(\S\+\)\s\+(\(\S\+\)).\+|\2\t\t\1|' \
     | fzf \
-        -i --exact --cycle \
-        --info=inline --header="Shift + Up/Down to scroll. ESC to quit." \
+        -i -m --exact --cycle \
+        --info=inline \
+        --header="Shift + Up/Down to scroll. ESC to quit." --header-first \
         --preview "man '{}'" \
-    | xargs -r man
-
+        --bind="enter:execute(echo {+} | xargs --max-args 2 man)+clear-selection"
