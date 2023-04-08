@@ -1,0 +1,36 @@
+#! /usr/bin/sh
+
+cd "$1" || exit 1
+
+RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case" 
+FILENAME_FROM_ENTRY="printf '%s\n' {+} | cut -d: -f1"
+FILENAME_AND_LINE="printf '%s\n' {+} | cut -d: -f1-2 --output-delimiter=' '"
+BAT_AS_PAGER="bat --paging=always --style=numbers"
+
+FZF_HEADER="\
+(Shift-)Tab to (de)select files from: ${*:-"$(pwd)"}
+Ctrl + ([V]im | [P]ager | [O]pen | [Y]ank | [W]rap)"
+
+FZF_BIND_COMMANDS="\
+ctrl-v:become($FILENAME_FROM_ENTRY | xargs ${EDITOR:-vim} -p),\
+ctrl-p:execute($FILENAME_AND_LINE | xargs --max-args=2 $BAT_AS_PAGER --pager='less -RF +{2}Gu' {1})+clear-selection,\
+ctrl-o:become($FILENAME_FROM_ENTRY | xargs --max-args=1 detach xdg-open),\
+ctrl-y:execute($FILENAME_FROM_ENTRY | xsel -ib),\
+ctrl-w:toggle-preview-wrap,\
+change:reload($RG_PREFIX {q} || true),\
+enter:ignore" 
+
+FZF_PREVIEW='bat \
+    --color always \
+    --style="numbers" \
+    --highlight-line {2}\
+    {1}' 
+    # --terminal-width="$FZF_PREVIEW_COLUMNS" \
+
+FZF_DEFAULT_COMMAND="$RG_PREFIX ''" fzf \
+    --exact -i --multi \
+    --ansi --delimiter=: \
+    --info=inline --header-first --header="$FZF_HEADER" \
+    --preview="$FZF_PREVIEW"\
+    --preview-window="wrap,+{2}/2"\
+    --bind="$FZF_BIND_COMMANDS"
