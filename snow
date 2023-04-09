@@ -1,17 +1,36 @@
 #! /usr/bin/sh
 
 
-find "$@" -path '*/.*' -prune -or -type f -print0 \
-    | sort -z \
-    | fzf \
-        --exact -i --multi \
-        --read0 --print0 \
-        --info=inline --header="Open files from: ${*:-"$(pwd)"}
-(Shift-)Tab to (de)select  |  Ctrl + ([V]im | [P]ager | [O]pen)" --header-first \
-        --preview='bat --color always --wrap character --style="numbers" {}' \
-        --bind="\
+file_discovery() {
+    if which rg >/dev/null; then
+        rg --files --null "$@"
+    else
+        find "$@" -path '*/.*' -prune -or -type f -print0
+    fi
+}
+
+FZF_HEADER="\
+(Shift-)Tab to (de)select files from: ${*:-"$(pwd)"}
+Ctrl + ([V]im | [P]ager | [O]pen)"
+
+FZF_BIND_COMMANDS="\
 ctrl-v:become(${EDITOR:-vim} -p {+}),\
 ctrl-o:become(echo {+} | xargs --max-args=1 detach xdg-open),\
 ctrl-p:execute(echo {+} | xargs --max-args=1 bat --paging=always --style=numbers)+clear-selection,\
+esc:cancel,\
 enter:ignore" 
+
+
+main() {
+    file_discovery "$@" \
+        | sort -z \
+        | fzf \
+            --exact -i --multi \
+            --read0 --print0 \
+            --info=inline --header="$FZF_HEADER" --header-first \
+            --preview="${SCRIPTS:-$HOME/scripts}/snow-preview.sh {}" \
+            --bind="$FZF_BIND_COMMANDS"
+}
+
+main "$@"
 
