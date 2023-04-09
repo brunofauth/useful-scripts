@@ -1,6 +1,11 @@
 #! /bin/sh
 
 
+FZF_BIND_COMMANDS="\
+enter:execute(echo {+} | xargs --max-args 2 man)+clear-selection,\
+esc:cancel\
+"
+
 man -k . \
     | sed 's|\(\S\+\)\s\+(\(\S\+\)).\+|\2\t\t\1|' \
     | fzf \
@@ -8,4 +13,4 @@ man -k . \
         --info=inline \
         --header="Shift + Up/Down to scroll. ESC to quit." --header-first \
         --preview "man '{}'" \
-        --bind="enter:execute(echo {+} | xargs --max-args 2 man)+clear-selection"
+        --bind="$FZF_BIND_COMMANDS"

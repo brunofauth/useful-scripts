@@ -8,7 +8,7 @@ SYNOPSYS
 DESCRIPTION
     Rename filenames to not contain non-chad characters (diacritics, spaces)
     If no files are given, use all files present in the current directory.
-    Filenams may be piped into stdin too.
+    Filenames may be piped into stdin too.
 
 OPTIONS
     -h, --help

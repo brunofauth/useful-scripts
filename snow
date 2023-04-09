@@ -9,6 +9,9 @@ file_discovery() {
     fi
 }
 
+PREVIEW_SCRIPT="${SCRIPTS:-$HOME/scripts}/snow-preview.sh" 
+BAT_PAGER="bat --paging=always --style=plain"
+
 FZF_HEADER="\
 (Shift-)Tab to (de)select files from: ${*:-"$(pwd)"}
 Ctrl + ([V]im | [P]ager | [O]pen)"
@@ -16,10 +19,9 @@ Ctrl + ([V]im | [P]ager | [O]pen)"
 FZF_BIND_COMMANDS="\
 ctrl-v:become(${EDITOR:-vim} -p {+}),\
 ctrl-o:become(echo {+} | xargs --max-args=1 detach xdg-open),\
-ctrl-p:execute(echo {+} | xargs --max-args=1 bat --paging=always --style=numbers)+clear-selection,\
+ctrl-p:execute(echo {+} | xargs printf '%s\0' | xargs -0I [file] sh -c '$PREVIEW_SCRIPT [file] | $BAT_PAGER')+clear-selection,\
 esc:cancel,\
 enter:ignore" 
-
 
 main() {
     file_discovery "$@" \
@@ -28,7 +30,7 @@ main() {
             --exact -i --multi \
             --read0 --print0 \
             --info=inline --header="$FZF_HEADER" --header-first \
-            --preview="${SCRIPTS:-$HOME/scripts}/snow-preview.sh {}" \
+            --preview="$PREVIEW_SCRIPT {}" \
             --bind="$FZF_BIND_COMMANDS"
 }
 

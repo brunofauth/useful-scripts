@@ -3,18 +3,12 @@
 
 import shutil
 import sys
-import os
 import pathlib
 
 
 def format_fname(fname: str) -> str:
-    return (fname
-        .lower()
-        .replace(" ", "-")
-        .replace("(", "")
-        .replace(")", "")
-        .replace("[", "")
-        .replace("]", ""))
+    return fname.lower().translate({
+        " ": "-", "(": "", ")": "", "[": "", "]": "", })
 
 
 def main(*files: str, verbose=True) -> None:
@@ -24,10 +18,11 @@ def main(*files: str, verbose=True) -> None:
 
         if (new_path := old_path.parent / format_fname(old_path.name)).exists():
             print(f"'{new_path}' already exists, skipping.", file=sys.stderr)
-        else:
-            shutil.move(old_path, new_path)
-            if verbose:
-                print(f'"{old_path}" -> "{new_path}"')
+            continue
+
+        shutil.move(old_path, new_path)
+        if verbose:
+            print(f'"{old_path}" -> "{new_path}"')
 
 
 if __name__ == "__main__":
