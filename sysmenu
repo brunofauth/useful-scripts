@@ -29,7 +29,7 @@ else
 fi
 
 
-case "$(eval "$MENU_CMD" <<< "$MENU")" in
+case "$(echo "$MENU" | eval "$MENU_CMD")" in
     *Lock) i3lock-fancy ;;
     *Switch-User) dm-tool switch-to-greeter ;;
     *Logout) openbox --exit;;
