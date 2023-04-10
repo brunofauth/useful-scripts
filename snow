@@ -13,13 +13,18 @@ PREVIEW_SCRIPT="${SCRIPTS:-$HOME/scripts}/snow-preview.sh"
 BAT_PAGER="bat --paging=always --style=plain"
 
 FZF_HEADER="\
-(Shift-)Tab to (de)select files from: ${*:-"$(pwd)"}
-Ctrl + ([V]im | [P]ager | [O]pen)"
+Files from: ${*:-"$(pwd)"}
+(Shift-)Tab to (de)select
+Ctrl + ([V]im | [L]ess | [O]pen | [P]rint | [Y]ank | [W]rap | [R]otate)"
 
 FZF_BIND_COMMANDS="\
 ctrl-v:become(${EDITOR:-vim} -p {+}),\
+ctrl-l:execute(echo {+} | xargs printf '%s\0' | xargs -0I [file] sh -c '$PREVIEW_SCRIPT [file] | $BAT_PAGER')+clear-selection,\
 ctrl-o:become(echo {+} | xargs --max-args=1 detach xdg-open),\
-ctrl-p:execute(echo {+} | xargs printf '%s\0' | xargs -0I [file] sh -c '$PREVIEW_SCRIPT [file] | $BAT_PAGER')+clear-selection,\
+ctrl-p:accept-non-empty,\
+ctrl-y:execute(printf '%s\n' {+} | xsel -ib),\
+ctrl-w:toggle-preview-wrap,\
+ctrl-r:change-preview-window(right,70%|top,60%),\
 esc:cancel,\
 enter:ignore" 
 
@@ -31,7 +36,9 @@ main() {
             --read0 --print0 \
             --info=inline --header="$FZF_HEADER" --header-first \
             --preview="$PREVIEW_SCRIPT {}" \
-            --bind="$FZF_BIND_COMMANDS"
+            --preview-window="right,70%,wrap"\
+            --bind="$FZF_BIND_COMMANDS" \
+        | xargs -r0 --max-args=1
 }
 
 main "$@"

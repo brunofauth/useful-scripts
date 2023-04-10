@@ -2,22 +2,27 @@
 
 cd "$1" || exit 1
 
-RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case" 
+RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case --trim" 
 FILENAME_FROM_ENTRY="printf '%s\n' {+} | cut -d: -f1"
-FILENAME_AND_LINE="printf '%s\n' {+} | cut -d: -f1-2 --output-delimiter=' '"
 BAT_AS_PAGER="bat --paging=always --style=numbers"
+FILENAME_AND_LINE="printf '%s\n' {+} | sed -E 's|^([^:]+):([0-9]+):.*|$BAT_AS_PAGER --pager=\\\\\\\'less -RF \\+\\2Gu\\\\\\\' \\1|g'"
+SNOW_RG_PAGER="${SCRIPTS:-$HOME/scripts}/snow-rg-pager.sh"
 
 FZF_HEADER="\
-(Shift-)Tab to (de)select files from: ${*:-"$(pwd)"}
-Ctrl + ([V]im | [P]ager | [O]pen | [Y]ank | [W]rap)"
+${*:-"$(pwd)"}
+(Shift-)Tab to (de)select
+Ctrl + ([V]im | [L]ess | [O]pen | [P]rint | [Y]ank | [W]rap | [R]otate)"
 
 FZF_BIND_COMMANDS="\
-ctrl-v:become($FILENAME_FROM_ENTRY | xargs ${EDITOR:-vim} -p),\
-ctrl-p:execute($FILENAME_AND_LINE | xargs --max-args=2 $BAT_AS_PAGER --pager='less -RF +{2}Gu' {1})+clear-selection,\
+ctrl-v:become($FILENAME_FROM_ENTRY | xargs --open-tty ${EDITOR:-vim} -p),\
+ctrl-l:execute(printf '%s\n' {+} | $SNOW_RG_PAGER)+clear-selection,\
 ctrl-o:become($FILENAME_FROM_ENTRY | xargs --max-args=1 detach xdg-open),\
+ctrl-p:become($FILENAME_FROM_ENTRY),\
 ctrl-y:execute($FILENAME_FROM_ENTRY | xsel -ib),\
 ctrl-w:toggle-preview-wrap,\
+ctrl-r:change-preview-window(right,70%|top,60%),\
 change:reload($RG_PREFIX {q} || true),\
+esc:cancel,\
 enter:ignore" 
 
 FZF_PREVIEW='bat \
@@ -32,5 +37,5 @@ FZF_DEFAULT_COMMAND="$RG_PREFIX ''" fzf \
     --ansi --delimiter=: \
     --info=inline --header-first --header="$FZF_HEADER" \
     --preview="$FZF_PREVIEW"\
-    --preview-window="wrap,+{2}/2"\
+    --preview-window="right,70%,wrap,+{2}/2"\
     --bind="$FZF_BIND_COMMANDS"
