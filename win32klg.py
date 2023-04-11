@@ -1,6 +1,5 @@
 import contextlib
 import ctypes.wintypes
-import ctypes
 import ctypes_helper
 import winfunc
 
