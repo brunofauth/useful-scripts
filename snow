@@ -32,7 +32,7 @@ main() {
     file_discovery "$@" \
         | sort -z \
         | fzf \
-            --exact -i --multi \
+            -i --multi \
             --read0 --print0 \
             --info=inline --header="$FZF_HEADER" --header-first \
             --preview="$PREVIEW_SCRIPT {}" \
