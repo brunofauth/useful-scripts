@@ -3,22 +3,19 @@
 
 import fire
 import re
-import os
 
-
-from typing import TextIO
+from typing import TextIO, Iterator
 
 
 def iter_segments(fd: TextIO, regex: re.Pattern) -> Iterator[list[str]]:
     lines = []
     for line in fd:
-        if not pattern.match(line):
+        if not regex.match(line):
             lines.append(line)
         else:
             yield lines
             lines = [line]
     yield lines
-
 
 
 def main(regex: str, big_file: str, out_format: str="{i:0=3d}") -> None:
@@ -29,6 +26,6 @@ def main(regex: str, big_file: str, out_format: str="{i:0=3d}") -> None:
                 dst.writelines(lines)
 
 
-
 if __name__ == "__main__":
     fire.Fire(main)
+
