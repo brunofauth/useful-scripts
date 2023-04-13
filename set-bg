@@ -2,6 +2,8 @@
 
 
 wallpapers="/usr/share/backgrounds/"
+wallpaper="$(find "$wallpapers" | sxiv -to -)"
 
-find "$wallpapers" | sxiv -to - | xargs -r xwallpaper --zoom
+ln -sT "$wallpaper" "${XDG_CONFIG_HOME:-$HOME/.config}/wallpaper"
+xwallpaper --zoom "$wallpaper"
 

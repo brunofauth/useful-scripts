@@ -1,8 +1,0 @@
-#! /bin/sh
-
-
-if grep -qsEi "(Microsoft|WSL)" /proc/version; then
-    powershell.exe -Command Set-Clipboard "$(curl -sS http://ipecho.net/plain)"
-else
-    curl -sS "http://ipecho.net/plain" | xsel -bi 
-fi
