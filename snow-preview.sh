@@ -29,6 +29,11 @@ case "$file_type" in
     video/*) ffprobe -hide_banner "$1" ;;
     audio/*) ffprobe -hide_banner "$1" ;;
     application/x-pie-executable) preview_for_binary "$1" ;;
+    application/x-7z-compressed) 7z l "$1" ;;
+    application/gzip) 7z l "$1" ;;
+    application/zstd) 7z l "$1" ;;
+    application/x-bzip2) 7z l "$1" ;;
+    application/x-tar) 7z l "$1" ;;
     *) echo "No suitable preview for file of type: $file_type"
 esac
 
