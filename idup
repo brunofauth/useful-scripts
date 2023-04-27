@@ -173,9 +173,7 @@ sync_dir() {
 }
 
 
-main() {
-    IFS="
-    "
+main_cli() {
     for dir_to_sync; do
         local src="$DOTS_CFG_ROOT/$dir_to_sync"
         local dst="$HOME_CFG_ROOT/$dir_to_sync"
@@ -194,10 +192,31 @@ main() {
 }
 
 
-if [ $# -lt 1 ]; then
-    >&2 echo "Usage: idup <folders-to-update...>"
-    exit 1
-    set -- "$(find "$DOTS_CFG_ROOT" -maxdepth 1 -printf '%P\n')"
-fi
-main "$@"
+main_fzf() {
+    local f_src_dirs="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    find "$DOTS_CFG_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort > "$f_src_dirs"
+    local f_dst_dirs="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    find "$HOME_CFG_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort > "$f_dst_dirs"
+
+    local dirs_to_sync="$(comm -12 "$f_src_dirs" "$f_dst_dirs" | fzf -i -m)"
+    rm "$f_src_dirs" "$f_dst_dirs"
+
+    local IFS='
+'
+    local dir_to_sync
+    for dir_to_sync in $dirs_to_sync; do
+        sync_dir "$DOTS_CFG_ROOT/$dir_to_sync" "$HOME_CFG_ROOT/$dir_to_sync"
+    done
+}
+
+
+main() {
+    if [ $# -lt 1 ]; then
+        main_fzf
+    else
+        main_cli "$@"
+    fi
+}
+
+main
 
