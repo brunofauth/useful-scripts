@@ -17,15 +17,11 @@ case "$browser" in
     -h|--help)
         fatal "$USAGE"
         ;;
-    ff|firefox)
-        exec firefox --private
-        ;;
-    qb|qutebrowser)
-        exec qutebrowser ":open -p"
-        ;;
-    chrome|chromium)
-        exec chromium --incognito
-        ;;
+    ff|firefox) exec firefox --private ;;
+    qb|qutebrowser) exec qutebrowser ":open -p" ;;
+    chrome) exec chrome --incognito ;;
+    chromium) exec chromium --incognito ;;
+    ungoogled-chromium) exec ungoogled-chromium --incognito ;;
     *)
         fatal "Unsupported browser: $browser"
         ;;
