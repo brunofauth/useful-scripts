@@ -1,0 +1,46 @@
+#! /bin/sh
+
+
+yay_install_opts="--sudoloop --removemake --answerdiff None"
+yay_get_packages_cmd="yay --aur --color=always --singlelineresults -Ss"
+sed_fmt_yay_results='sed -E "s|^(\S+) [^\t]+\t|\1\t|g"'
+
+
+fzf_header="(Shift-)Tab to (de)select -||- ctrl + [S]earch, [I]nstall"
+fzf_bind_cmds="\
+ctrl-s:reload(echo {q} | xargs -r $yay_get_packages_cmd | $sed_fmt_yay_results)+clear-query,\
+ctrl-i:become(echo {+} | xargs -r yay $yay_install_opts -S),\
+esc:cancel\
+"
+fzf_preview_cmd="yay --aur --color=always -Si {1}"
+fzf_preview_window="bottom,40%"
+fzf_default_cmd="echo -n" # If no package is given, start with an empty slate
+
+
+fatal() {
+    >&2 echo "$@"
+    exit 1
+}
+
+
+fzf_search_or_default() {
+    [ $# -lt 1 ] && eval "$fzf_default_cmd" && return 0
+    eval "$yay_get_packages_cmd" '"$@"' | eval "$sed_fmt_yay_results"
+}
+
+
+main() {
+    fzf_search_or_default "$@" | fzf \
+        -i --multi \
+        --ansi \
+        --info=inline \
+        --header="$fzf_header" \
+        --header-first \
+        --bind="$fzf_bind_cmds" \
+        --preview="$fzf_preview_cmd" \
+        --preview-window="$fzf_preview_window" 
+}
+
+
+main "$@"
+
