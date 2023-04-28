@@ -58,8 +58,8 @@ def thread(autostart=True, name=None, daemon=None):
 
 def first(iter, func=bool):
     '''Returns the first element from iter that returns True.'''
-    for item in iter:
-        if func(item):
-            return item
-    raise ValueError("No such item.")
+    flag = object()
+    if (item := next(map(func, iter), flag)) is flag:
+        raise ValueError("No such item.")
+    return item
 
