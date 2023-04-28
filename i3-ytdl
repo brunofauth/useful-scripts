@@ -18,7 +18,7 @@ fi
 notify-send "Commencing video download." "URL: \"$url\"" -t 5000 -i "$ICON_DL"
 
 
-if ! youtube-dl "$url"; then
+if ! yt-dlp "$url"; then
     notify-send "Error on download!" -t 5000 -i "$ICON_ERR"
     exit 1
 fi

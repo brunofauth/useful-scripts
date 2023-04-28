@@ -5,7 +5,7 @@ cd "$1" || exit 1
 # REMOVE_DIACRITICS="${SCRIPTS:-$HOME/scripts}/remove-diacritics"
 RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case --trim --sort=path" 
 FILENAME_FROM_ENTRY="printf '%s\n' {+} | cut -d: -f1"
-BAT_AS_PAGER="bat --paging=always --style=numbers"
+# BAT_AS_PAGER="bat --paging=always --style=numbers"
 SNOW_RG_PAGER="${SCRIPTS:-$HOME/scripts}/snow-rg-pager.sh"
 
 FZF_HEADER="\

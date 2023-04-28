@@ -28,7 +28,7 @@ if [ "$1" = "-m" ]; then
     
     msg=$(udisksctl mount -b "$chosen")
     ret=$?
-    echo -n $msg | sed -r "s|^Mounted $chosen at||" | xsel -bi
+    printf '%s' "$msg" | sed -r "s|^Mounted $chosen at||" | xsel -bi
 
 elif [ "$1" = "-u" ]; then
     parts=$(lsblk -lp | grep "part ." | awk '{print $1" ("$7")"}')
@@ -46,12 +46,12 @@ fi
 
 
 if [ ! -t 1 ]; then
-    if [ $ret -eq 0 ]; then
+    if [ "$ret" -eq 0 ]; then
         notify-send -t 3000 -i "$ICON_HDD" "$msg"
     else
         notify-send -t 3000 -i "$ICON_ERR" "$msg"
     fi
 else
     echo "$msg"
-    exit $ret
+    exit "$ret"
 fi

@@ -5,7 +5,7 @@ tmpdir=$(mktemp zatdoc.XXXXXXXXXX -d --tmpdir)
 
 soffice --convert-to pdf "$@" --outdir "$tmpdir"
 
-for file in $(ls "$tmpdir"); do
-    zathura --fork "$tmpdir/$file"
+for file in "$tmpdir"/*; do
+    zathura --fork "$file"
 done
 

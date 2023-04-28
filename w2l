@@ -2,6 +2,6 @@
 
 
 for filepath in "$@"; do
-    echo "$(echo "$filepath" | sed -e 's|\\|/|g' -e 's|\(.\):|/mnt/\L\1|')"
+    echo "$filepath" | sed -e 's|\\|/|g' -e 's|\(.\):|/mnt/\L\1|'
 done
 

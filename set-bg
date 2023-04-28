@@ -1,8 +1,22 @@
 #! /bin/sh
 
 
-wallpapers="/usr/share/backgrounds/"
-wallpaper="$(find "$wallpapers" | sxiv -to -)"
+enum_wallpapers() {
+    local source_dirs="$1"
+
+    printf '%s' "$source_dirs" \
+        | tr : '\0' \
+        | find \
+            -files0-from - \
+            -type f \
+            \( -name "*.png" -or -name "*.jpg" -or -name "*.jpeg" \)
+}
+
+wallpaper_dirs="/usr/share/backgrounds/"
+wallpaper_dirs="$wallpaper_dirs:/usr/share/wallpapers/"
+
+wallpaper="$(enum_wallpapers "$wallpaper_dirs" | sxiv -to -)"
+[ -n "$wallpaper" ] || exit 0
 
 ln -sT "$wallpaper" "${XDG_CONFIG_HOME:-$HOME/.config}/wallpaper"
 xwallpaper --zoom "$wallpaper"

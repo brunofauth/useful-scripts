@@ -4,7 +4,7 @@
 [ $# -lt 2 ] && exit 1
 
 comm -23 \
-        "$(find $1 -type f,l -printf '%P\n' | sort | procsub)" \
+        "$(find "$1" -type f,l -printf '%P\n' | sort | procsub)" \
         "$(find "$2" -type f,l -printf '%P\n' | sort | procsub)" \
     | xargs -rI '{}' ln -visT "${1%%/}/{}" "${2%%/}/{}"
 

@@ -4,17 +4,11 @@
 preview_for_binary() {
 
     if [ "$SNOW_RUN_BIN" -eq 1 ]; then
-
-        out="$("$1" --help 2>&1)"
-        [ $? -eq 0 ] && echo "$out" && return
-
-        out="$("$1" -h 2>&1)"
-        [ $? -eq 0 ] && echo "$out" && return
+        out="$("$1" --help 2>&1)" && echo "$out" && return
+        out="$("$1" -h 2>&1)" && echo "$out" && return
     fi
 
-    out="$(man "$1" 2>&1)"
-    [ $? -eq 0 ] && echo "$out" && return
-
+    out="$(man "$1" 2>&1)" && echo "$out" && return
     echo "No suitable preview for binary: '$1'"
 }
 
