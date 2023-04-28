@@ -9,27 +9,25 @@ fatal() {
 }
 
 
-if [ "$#" -lt 1 ]; then
-   browsers="$BROWSER"
-else
-   browsers="$@"
-fi
+readonly browser="${1:-$BROWSER}"
+[ -z "$browser" ] && fatal "No browser supplied."
 
 
-for browser in "$browsers"; do
-    case "$browser" in
-        -h|--help)
-            fatal "$USAGE"
-            ;;
-        ff|firefox)
-            firefox --private &
-            ;;
-        qb|qutebrowser)
-            qutebrowser ":open -p"
-            ;;
-        *)
-            fatal "Unsupported browser: $browser"
-            ;;
-    esac
-done
+case "$browser" in
+    -h|--help)
+        fatal "$USAGE"
+        ;;
+    ff|firefox)
+        exec firefox --private
+        ;;
+    qb|qutebrowser)
+        exec qutebrowser ":open -p"
+        ;;
+    chrome|chromium)
+        exec chromium --incognito
+        ;;
+    *)
+        fatal "Unsupported browser: $browser"
+        ;;
+esac
 
