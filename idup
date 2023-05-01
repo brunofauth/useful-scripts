@@ -151,7 +151,7 @@ sync_dir() {
             r*) "${PAGER:-less}" "$src/$common_file";;
             l*) "${PAGER:-less}" "$dst/$common_file";;
             d*)
-                diff "$src/$common_file" "$dst/$common_file" | "${PAGER:-less}"
+                diff --color=always "$src/$common_file" "$dst/$common_file" | "${PAGER:-less -r}"
                 case "$(prompt_choice "Edit files? (Remote/Local/None)" "rln" "n")" in
                     r*) "${EDITOR:-vim}" "$src/$common_file" ;;
                     l*) "${EDITOR:-vim}" "$dst/$common_file" ;;

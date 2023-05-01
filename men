@@ -2,6 +2,7 @@
 
 
 FZF_BIND_COMMANDS="\
+ctrl-r:change-preview-window(right,50%|top,75%),\
 enter:execute(echo {+} | xargs --max-args 2 man)+clear-selection,\
 esc:cancel\
 "
