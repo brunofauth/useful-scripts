@@ -15,4 +15,4 @@ man -k . \
         --header="Shift + Up/Down to scroll. ESC to quit." --header-first \
         --preview "man '{}'" \
         --bind="$FZF_BIND_COMMANDS" \
-        --query="!^3" # Do not show, by default, (C, CPP, etc...) functions
+        --query="!^3 " # Do not show, by default, (C, CPP, etc...) functions
