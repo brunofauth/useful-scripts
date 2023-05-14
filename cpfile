@@ -1,4 +1,0 @@
-#! /usr/bin/env sh
-
-< "$1" xclip -t "$(file -b --mime-type "$1")" -sel c
-

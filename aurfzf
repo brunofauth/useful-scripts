@@ -2,17 +2,19 @@
 
 
 yay_install_opts="--sudoloop --removemake --answerdiff None"
-yay_get_packages_cmd="yay --aur --color=always --singlelineresults -Ss"
+yay_get_packages_cmd="yay --color=always --singlelineresults -Ss"
+# yay_get_packages_cmd="yay --aur --color=always --singlelineresults -Ss"
 sed_fmt_yay_results='sed -E "s|^(\S+) [^\t]+\t|\1\t|g"'
 
 
 fzf_header="(Shift-)Tab to (de)select -||- ctrl + [S]earch, [I]nstall"
 fzf_bind_cmds="\
 ctrl-s:reload(echo {q} | xargs -r $yay_get_packages_cmd | $sed_fmt_yay_results)+clear-query,\
-ctrl-i:become(echo {+} | xargs -r yay $yay_install_opts -S),\
+ctrl-i:become(echo {+} | sed -E 's:^[^/]+/(\\S+) .+:\\1:' | xargs -r yay $yay_install_opts -S),\
 esc:cancel\
 "
-fzf_preview_cmd="yay --aur --color=always -Si {1}"
+fzf_preview_cmd="yay --color=always -Si {1}"
+# fzf_preview_cmd="yay --aur --color=always -Si {1}"
 fzf_preview_window="bottom,40%"
 fzf_default_cmd="echo -n" # If no package is given, start with an empty slate
 
