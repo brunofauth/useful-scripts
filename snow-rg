@@ -21,9 +21,9 @@ ctrl-p:become($FILENAME_FROM_ENTRY),\
 ctrl-y:execute($FILENAME_FROM_ENTRY | xsel -ib),\
 ctrl-w:toggle-preview-wrap,\
 ctrl-r:change-preview-window(right,70%|top,60%),\
-change:reload($RG_PREFIX {q} || true),\
 esc:cancel,\
 enter:ignore" 
+# change:reload($RG_PREFIX {q} || true),\
 
 FZF_PREVIEW='bat \
     --color always \
