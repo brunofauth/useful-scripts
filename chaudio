@@ -1,0 +1,73 @@
+#! /bin/sh
+
+
+usage="\
+USAGE:
+    chaudio [OPTIONS...]
+
+OPTIONS:
+    -h, --help
+    -i, --sink-input <SINK-INPUT-ID>
+    -s, --sink <SINK-ID>
+    -d, --set-default-sink
+"
+
+
+fatal() {
+    >&2 echo "$@"
+    exit 1
+}
+
+
+parse_args() {
+    args="$(getopt -o "i:s:d" -l "sink-input:,sink:,set-default-sink" -n "chaudio" -- "$@")" \
+        || fatal "Error parsing arguments!"
+    eval set -- "$args"
+
+    while true; do
+        case "$1" in
+            '-h'|'--help') echo "$USAGE"; exit 0 ;;
+            '-i'|'--sink-input') shift; playback_stream="$1"; shift ;;
+            '-s'|'--sink') shift; target_sink="$1"; shift ;;
+            '-d'|'--set-default-sink') shift; set_default_sink=1 ;; 
+            '--') shift; break; ;;
+        esac
+    done
+}
+
+
+prompt_target_sink() {
+    target_sink="$( \
+        pactl --format=json list sinks \
+            | jq --raw-output '.[] | [.index,.properties."device.description"] | @tsv' \
+            | rofi -dmenu \
+            | cut -f1)"
+    [ -z "$target_sink" ] && exit 1
+}
+
+
+prompt_playback_stream() {
+    playback_stream="$( \
+        pactl --format=json list sink-inputs \
+            | jq --raw-output '.[] | [.index,.properties."application.name"] | @tsv' \
+            | rofi -dmenu \
+            | cut -f1)"
+    [ -z "$playback_stream" ] && exit 1
+}
+
+
+main() {
+    parse_args "$@"
+
+    if [ "$set_default_sink" = 1 ]; then
+        [ -n "$target_sink" ] || prompt_target_sink
+        pactl set-default-sink "$target_sink"
+    else
+        [ -n "$playback_stream" ] || prompt_playback_stream
+        [ -n "$target_sink" ] || prompt_target_sink
+        pactl move-sink-input "$playback_stream" "$target_sink"
+    fi
+}
+   
+main "$@"
+
