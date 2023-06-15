@@ -40,7 +40,7 @@ prompt_target_sink() {
     target_sink="$( \
         pactl --format=json list sinks \
             | jq --raw-output '.[] | [.index,.properties."device.description"] | @tsv' \
-            | rofi -dmenu \
+            | rofi -dmenu -theme theme.rasi \
             | cut -f1)"
     [ -z "$target_sink" ] && exit 1
 }
@@ -50,7 +50,7 @@ prompt_playback_stream() {
     playback_stream="$( \
         pactl --format=json list sink-inputs \
             | jq --raw-output '.[] | [.index,.properties."application.name"] | @tsv' \
-            | rofi -dmenu \
+            | rofi -dmenu -theme theme.rasi \
             | cut -f1)"
     [ -z "$playback_stream" ] && exit 1
 }
