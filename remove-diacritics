@@ -1,0 +1,5 @@
+#! /bin/sh
+
+
+exec iconv -f utf8 -t ascii//TRANSLIT -
+
