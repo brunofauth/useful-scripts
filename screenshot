@@ -1,0 +1,22 @@
+#! /bin/sh
+
+
+pics_dir="${XDG_PICTURES_DIR:-$HOME/pics}"
+mkdir --parents "$pics_dir"
+
+win_name="$(xdotool getactivewindow getwindowname \
+    | remove-diacritics \
+    | tr " _\t" "---" \
+    | tr -d "()[]'\"{}" \
+    | tr --squeeze-repeats "-" \
+    | tr "[:upper:]" "[:lower:]")"
+
+file_name="$(date +%Y-%m-%d_%H-%M-%S.%N)_$win_name.png"
+
+flameshot full --raw > "$pics_dir/$file_name"
+notify-send \
+    --app-name="Screenshot" \
+    --urgency=low \
+    "Screenshot taken" \
+    "$pics_dir/$file_name"
+
