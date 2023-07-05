@@ -20,7 +20,7 @@ fatal() {
 
 
 parse_args() {
-    args="$(getopt -o "i:s:d" -l "sink-input:,sink:,set-default-sink" -n "chaudio" -- "$@")" \
+    args="$(getopt -o "hi:s:d" -l "help,sink-input:,sink:,set-default-sink" -n "chaudio" -- "$@")" \
         || fatal "Error parsing arguments!"
     eval set -- "$args"
 

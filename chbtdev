@@ -1,0 +1,67 @@
+#! /bin/sh
+
+
+usage="\
+USAGE:
+    chaudio [OPTIONS...]
+
+OPTIONS:
+    -h, --help
+    -d, --device <DEVICE-ID>
+"
+
+
+fatal() {
+    >&2 echo "$@"
+    exit 1
+}
+
+
+parse_args() {
+    args="$(getopt -o "hd:" -l "help,device" -n "chbtdev" -- "$@")" \
+        || fatal "Error parsing arguments!"
+    eval set -- "$args"
+
+    while true; do
+        case "$1" in
+            '-h'|'--help') echo "$usage"; exit 0 ;;
+            '-d'|'--device') shift; target_device="$1"; shift ;;
+            '--') shift; break; ;;
+        esac
+    done
+}
+
+
+prompt_target_device() {
+    local devices
+    local delay=5
+    while ! devices="$(bluetoothctl devices 2>/dev/null)"; do
+        >&2 echo "Failed querying devices; retrying in $delay seconds."
+        sleep "$delay"
+    done
+    target_device="$(echo "$devices" \
+            | sed -e 's|^Device ||' -e "s| |\t|g" \
+            | rofi -dmenu -theme theme.rasi \
+            | cut -f1)"
+    [ -z "$target_device" ] && exit 1
+}
+
+
+main() {
+    parse_args "$@"
+
+    if bluetoothctl show | grep -q 'Powered: no$'; then
+        local delay=5
+        while !  bluetoothctl power on; do
+            >&2 echo "Failed turning bluetooth device on; retrying in $delay seconds."
+            sleep "$delay"
+        done
+    fi
+
+    [ -n "$target_device" ] || prompt_target_device
+    bluetoothctl connect "$target_device"
+}
+
+
+main "$@"
+    

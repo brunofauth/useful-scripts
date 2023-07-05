@@ -18,12 +18,19 @@ def iter_segments(fd: TextIO, regex: re.Pattern) -> Iterator[list[str]]:
     yield lines
 
 
-def main(regex: str, big_file: str, out_format: str="{i:0=3d}") -> None:
+def main(
+    regex: str,
+    big_file: str,
+    out_format: str="{i:0=3d}",
+    max_chunks: int = 0
+) -> None:
     with open(big_file) as src:
         pattern = re.compile(regex)
         for i, lines in enumerate(iter_segments(src, pattern)):
             with open(out_format.format(i=i), "w") as dst:
                 dst.writelines(lines)
+            if max_chunks > 0 and max_chunks - 1 >= i:
+                break
 
 
 if __name__ == "__main__":
