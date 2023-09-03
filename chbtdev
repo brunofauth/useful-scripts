@@ -37,6 +37,7 @@ prompt_target_device() {
     local delay=5
     while ! devices="$(bluetoothctl devices 2>/dev/null)"; do
         >&2 echo "Failed querying devices; retrying in $delay seconds."
+        >&2 echo "Maybe try running 'sudo systemctl status bluetooth.service'"
         sleep "$delay"
     done
     target_device="$(echo "$devices" \
