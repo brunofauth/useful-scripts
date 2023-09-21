@@ -4,7 +4,7 @@
 case "$1" in
     *.png) filetype="image/png" ;;
     *.jpg|*.jpeg) filetype="image/jpeg" ;;
-    *) >&2 echo "not implemented" && exit 1 ;;
+    *) >&2 echo "not implemented for '$(file -b --mime "$1" | cut -d';' -f1)'" && exit 1 ;;
 esac
 
 
