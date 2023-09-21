@@ -1,0 +1,20 @@
+# /bin/sh
+
+
+filetype="$( \
+    xclip -selection clipboard -o \
+        | head --bytes=20 - \
+        | file -b --mime - \
+        | cut -d ';' -f1)"
+
+case "$filetype" in
+    image/png) ext="png" ;;
+    image/jpeg) ext="jpg" ;;
+    *) >&2 echo "Not implemented for '$filetype'" && exit 1 ;;
+esac
+
+printf "Enter filename (ext=%s): " "$ext"
+read -r filename
+
+xclip -out -selection clipboard -target "$filetype" > "$filename.$ext"
+

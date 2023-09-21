@@ -1,0 +1,12 @@
+#! /bin/sh
+
+
+case "$1" in
+    *.png) filetype="image/png" ;;
+    *.jpg|*.jpeg) filetype="image/jpeg" ;;
+    *) >&2 echo "not implemented" && exit 1 ;;
+esac
+
+
+xclip -in -selection clipboard -target "$filetype" "$1"
+
