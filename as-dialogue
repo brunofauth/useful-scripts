@@ -1,0 +1,19 @@
+#! /usr/bin/env nu
+
+
+# Command description
+def main [
+    --work-dir: string # dir in which to run command, instead of cwd
+    command: string # the command to run
+    ...arguments: string # the command's arguments
+] {
+    let $resolved_dir = (
+        if $work_dir == null { $env.PWD }
+        else { $work_dir })
+
+    (exec kitty
+        --class="float-term"
+        --detach
+        --working-directory $resolved_dir
+        -- $command $arguments)
+}
