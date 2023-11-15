@@ -1,0 +1,13 @@
+#! /usr/bin/env python3
+
+import sys
+import fake_useragent as fua
+
+
+def main():
+    print(fua.UserAgent().chrome)
+
+
+if __name__ == "__main__":
+    main()
+
