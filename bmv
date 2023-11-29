@@ -22,6 +22,9 @@ OPTIONS
     -t --time
         Sort files by time of creation; newest first
 
+    -D --dirs-first
+        Show directories before file entries
+
 NOTE
     If the names of your files conflict with those of the flags, put them
     after a double dash (--), like this:
@@ -42,7 +45,7 @@ DO_DOT=0
 DO_SORT_BY_TIME=0
 
 
-args="$(getopt -o "hcldt" -l "help,copy,log,dotfiles,time" -n "bmv" -- "$@")" \
+args="$(getopt -o "hcldtD" -l "help,copy,log,dotfiles,time,dirs-first" -n "bmv" -- "$@")" \
     || fatal "Error parsing arguments!"
 eval set -- "$args"
 
@@ -68,6 +71,10 @@ while true; do
             DO_SORT_BY_TIME=1
             shift
             ;;
+        '-D'|'--dirs-first')
+            DO_DIRS_FIRST=1
+            shift
+            ;;
         '--')
             shift
             break
@@ -80,6 +87,7 @@ src_files="$(mktemp bmv-src.XXXXXXXXXX --tmpdir)"
 ls_flags=""
 [ "$DO_DOT" = 1 ] && ls_flags="$ls_flags -a"
 [ "$DO_SORT_BY_TIME" = 1 ] && ls_flags="$ls_flags -t"
+[ "$DO_DIRS_FIRST" = 1 ] && ls_flags="$ls_flags --group-directories-first"
 
 
 # Read names from stdin, each one a line, if anything is piped
