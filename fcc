@@ -1,0 +1,21 @@
+#! /bin/sh
+
+
+if [ -z "$1" ]; then
+    >&2 echo "Missing input filename"
+    exit 1
+fi
+
+if [ -z "$2" ]; then
+    >&2 echo "Missing output filename"
+    exit 1
+fi
+
+header="#separator:Pipe
+#html:true
+#columns:Front|Back|Tags
+#notetype:Basic
+#tags column:3"
+
+echo "$header" > "$2"
+grep -v '^\s*//' "$1" | flashcard-compile >> "$2"
