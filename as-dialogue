@@ -15,5 +15,5 @@ def main [
         --class="float-term"
         --detach
         --working-directory $resolved_dir
-        -- $command $arguments)
+        -- $command ...$arguments)
 }
