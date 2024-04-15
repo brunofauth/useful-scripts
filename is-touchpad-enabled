@@ -1,0 +1,23 @@
+#! /bin/sh
+
+if [ -n "$1" ]; then
+    device_id="$1"
+else
+    device_id="$(xinput list --short | grep -i touchpad | grep -Po 'id=\d+' | cut -d= -f2)"
+fi
+
+
+props="$(xinput list-props $device_id)"
+
+if [ "$?" -ne 0 ]; then
+    >&2 echo "Couldn't find touchpad device from xinput"
+    exit 2
+fi
+
+is_enabled="$(echo "$props" | grep 'Device Enabled' | awk '{print $NF}')"
+
+if [ "$is_enabled" -eq 1 ]; then
+    exit 0
+else
+    exit 1
+fi

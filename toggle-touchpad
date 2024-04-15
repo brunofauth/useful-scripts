@@ -1,15 +1,46 @@
 #! /bin/sh
 
-device_id="$(xinput list --short | grep -i touchpad | awk '{print $(NF-3)}' | cut -d= -f2)"
-is_enabled="$(xinput list-props "$device_id" | grep 'Device Enabled')"
 
-if [ "$?" -ne 0 ]; then
-    >&2 echo "Couldn't find touchpad device from xinput"
+USAGE="
+SYNOPSYS
+    ${0##*/} [options]
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits
+
+    -n --notify
+        Send a desktop notification about the status of the touchpad
+"
+
+fatal() {
+    >&2 echo "$@"
     exit 1
-fi
+}
 
-if [ "$(echo "$is_enabled" | awk '{print $NF}')" -eq 1 ]; then
+
+notify=0
+device_id="$(xinput list --short | grep -i touchpad | grep -Po 'id=\d+' | cut -d= -f2)"
+
+args="$(getopt -o "hn" -l "help,notify" -n "$0" -- "$@")" \
+    || fatal "Error parsing arguments!"
+eval set -- "$args"
+
+while true; do
+    case "$1" in
+        '-h'|'--help') echo "$USAGE"; exit 0 ;;
+        '-n'|'--notify') notify=1; shift ;;
+        '--') shift; break ;;
+    esac
+done
+
+
+if is-touchpad-enabled "$device_id"; then
     xinput disable "$device_id"
+    [ "$notify" -eq 1 ] && notify-send -t 3000 "Touchpad disabled"
 else
     xinput enable "$device_id"
+    [ "$notify" -eq 1 ] && notify-send -t 3000 "Touchpad enabled"
 fi
+
+exit 0
