@@ -1,0 +1,64 @@
+#! /bin/sh
+
+
+export DISPLAY=:0
+
+
+notify_user() (
+    # shellcheck disable=SC3043
+    local user; user="$1"; shift
+    sudo -u "$user" -- env "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id --user "$user")/bus" \
+        notify-send --expire-time=3000 "$@"
+)
+
+notify_user_err() (
+    # shellcheck disable=SC3043
+    local user; user="$1"; shift
+    sudo -u "$user" -- env "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id --user "$user")/bus" \
+        notify-send --urgency=critical --expire-time=0 --icon=dialog-error "$@"
+)
+
+notify_all() {
+    for user in $(users); do
+        notify_user "$user" "$@"
+    done
+}
+
+notify_all_err() {
+    for user in $(users); do
+        notify_user_err "$user" "$@"
+    done
+}
+
+notify_all \
+    --icon=dialog-information \
+    "Fetching package updates."
+
+pacman_output_fifo="$(mktemp --dry-run --tmpdir fetch-updates-fifo-XXXXXX)" \
+    || { notify_all_err "Error in '$0'" "Couldn't create temporary file"; exit 1; }
+if ! mkfifo "$pacman_output_fifo"; then
+    notify_all_err "Error in '$0'" "Couldn't create a fifo for pacman's output"
+    exit 1
+fi
+
+log_file="$(mktemp --tmpdir fetch-updates-log-XXXXXX)" \
+    || { notify_all_err "Error in '$0'" "Couldn't create temporary file"; exit 1; }
+tee "$log_file" < "$pacman_output_fifo" &
+
+nice -n 10 sudo -- pacman -Syuw --noconfirm --color=always > "$pacman_output_fifo"
+pacman_status=$?
+rm "$pacman_output_fifo"
+
+if [ $pacman_status -ne 0 ]; then
+    notify_all_err \
+        "Error fetching package updates" \
+        "Log file: '$log_file'"
+    exit 1
+fi
+
+notify_all \
+    --icon=dialog-information \
+    "Finished fetching updates" 
+rm "$log_file" || exit 1
+exit $pacman_status
+
