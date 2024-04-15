@@ -6,7 +6,7 @@ export DISPLAY=:0
 
 notify_user() (
     local user; user="$1"; shift
-    sudo -u "$user" "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id --user "$user")/bus" \
+    sudo -u "$user" -- env "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id --user "$user")/bus" \
         notify-send --expire-time=3000 "$@"
 )
 
@@ -20,7 +20,7 @@ notify_all \
     --icon=dialog-information \
     "Fetching package updates."
 
-pacman_output="$(sudo nice -n 10 pacman -Syuw --noconfirm --color=always | tee /dev/tty)"
+pacman_output="$(nice -n 10 sudo -- pacman -Syuw --noconfirm --color=always)"
 pacman_status=$?
 log_file="$(mktemp --tmpdir anacron-fetch-updates-XXXXXX)"
 echo "$pacman_output" > "$log_file"
@@ -46,7 +46,7 @@ notify_error() (
     case "$action" in
         copy-to-cb)
             touch "$log_file.lock"
-            echo "$log_file" | sudo -u "$user" xsel -ib
+            echo "$log_file" | sudo -u "$user" -- xsel -ib
             exit 0
             ;;
         *)
