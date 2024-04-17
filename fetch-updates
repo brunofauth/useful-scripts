@@ -2,20 +2,24 @@
 
 
 export DISPLAY=:0
+script_name="Package Updater"
+app_name="fetch-updates"
 
 
 notify_user() (
     # shellcheck disable=SC3043
     local user; user="$1"; shift
     sudo -u "$user" -- env "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id --user "$user")/bus" \
-        notify-send --expire-time=3000 "$@"
+        notify-send --app-name="$app_name" --icon=dialog-information --expire-time=3000 \
+            -- "$script_name" "$@"
 )
 
 notify_user_err() (
     # shellcheck disable=SC3043
     local user; user="$1"; shift
     sudo -u "$user" -- env "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id --user "$user")/bus" \
-        notify-send --urgency=critical --expire-time=0 --icon=dialog-error "$@"
+        notify-send --app-name="$app_name"--urgency=critical --expire-time=0 --icon=dialog-error \
+            -- "$script_name" "$@"
 )
 
 notify_all() {
@@ -30,35 +34,25 @@ notify_all_err() {
     done
 }
 
-notify_all \
-    --icon=dialog-information \
-    "Fetching package updates."
+notify_all "Fetching updates."
 
 pacman_output_fifo="$(mktemp --dry-run --tmpdir fetch-updates-fifo-XXXXXX)" \
-    || { notify_all_err "Error in '$0'" "Couldn't create temporary file"; exit 1; }
-if ! mkfifo "$pacman_output_fifo"; then
-    notify_all_err "Error in '$0'" "Couldn't create a fifo for pacman's output"
-    exit 1
-fi
+    || { notify_all_err "Couldn't create temporary file"; exit 1; }
+mkfifo "$pacman_output_fifo" \
+    || { notify_all_err "Couldn't create a fifo for pacman's output"; exit 1; }
 
 log_file="$(mktemp --tmpdir fetch-updates-log-XXXXXX)" \
-    || { notify_all_err "Error in '$0'" "Couldn't create temporary file"; exit 1; }
+    || { notify_all_err "Couldn't create temporary file for logging"; exit 1; }
 tee "$log_file" < "$pacman_output_fifo" &
 
-nice -n 10 sudo -- pacman -Syuw --noconfirm --color=always > "$pacman_output_fifo"
+nice -n 10 sudo -- pacman -Syuw --noconfirm --color=always > "$pacman_output_fifo" 2>&1
 pacman_status=$?
 rm "$pacman_output_fifo"
 
-if [ $pacman_status -ne 0 ]; then
-    notify_all_err \
-        "Error fetching package updates" \
-        "Log file: '$log_file'"
-    exit 1
-fi
+[ $pacman_status -ne 0 ] \
+    && { notify_all_err "Couldn't fetch updates. See: '$log_file'"; exit 1; }
 
-notify_all \
-    --icon=dialog-information \
-    "Finished fetching updates" 
+notify_all "Finished fetching updates" 
 rm "$log_file" || exit 1
 exit $pacman_status
 
