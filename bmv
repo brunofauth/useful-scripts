@@ -1,6 +1,8 @@
 #! /bin/sh
+# vim: foldmethod=marker foldlevel=0 foldclose=all
 
 
+# Usage Message {{{
 USAGE="
 SYNOPSYS
     ${0##*/} [options] [files...]
@@ -31,7 +33,7 @@ NOTE
         ${0##*/} -- --copy
     This will rename a file called '--copy', instead of activating the
     '--copy' switch.
-"
+" # }}}
 
 fatal() {
     >&2 echo "$@"
@@ -45,6 +47,7 @@ DO_DOT=0
 DO_SORT_BY_TIME=0
 
 
+# getopt argument parsing {{{
 args="$(getopt -o "hcldtD" -l "help,copy,log,dotfiles,time,dirs-first" -n "bmv" -- "$@")" \
     || fatal "Error parsing arguments!"
 eval set -- "$args"
@@ -81,6 +84,7 @@ while true; do
             ;;
     esac
 done
+# }}}
 
 
 src_files="$(mktemp bmv-src.XXXXXXXXXX --tmpdir)"

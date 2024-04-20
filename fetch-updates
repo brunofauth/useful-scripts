@@ -18,7 +18,7 @@ notify_user_err() (
     # shellcheck disable=SC3043
     local user; user="$1"; shift
     sudo -u "$user" -- env "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id --user "$user")/bus" \
-        notify-send --app-name="$app_name"--urgency=critical --expire-time=0 --icon=dialog-error \
+        notify-send --app-name="$app_name" --urgency=critical --expire-time=0 --icon=dialog-error \
             -- "$script_name" "$@"
 )
 
@@ -36,12 +36,12 @@ notify_all_err() {
 
 notify_all "Fetching updates."
 
-pacman_output_fifo="$(mktemp --dry-run --tmpdir fetch-updates-fifo-XXXXXX)" \
+pacman_output_fifo="$(mktemp --dry-run --tmpdir "$app_name-fifo-XXXXXX")" \
     || { notify_all_err "Couldn't create temporary file"; exit 1; }
 mkfifo "$pacman_output_fifo" \
     || { notify_all_err "Couldn't create a fifo for pacman's output"; exit 1; }
 
-log_file="$(mktemp --tmpdir fetch-updates-log-XXXXXX)" \
+log_file="$(mktemp --tmpdir "$app_name-log-XXXXXX")" \
     || { notify_all_err "Couldn't create temporary file for logging"; exit 1; }
 tee "$log_file" < "$pacman_output_fifo" &
 
