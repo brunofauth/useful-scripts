@@ -1,0 +1,88 @@
+#! /bin/sh
+# vim: foldmethod=marker foldlevel=0 foldclose=all
+
+
+# Usage Message {{{
+USAGE="
+SYNOPSYS
+    ${0##*/} [options]
+
+DESCRIPTION
+    View and manage systemd units
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits
+
+    -u, --user
+        Talk to the calling user's service manager, instead of the system's
+
+    -s, --system
+        Talk to the service manager of the system. This is the implied default.
+" # }}}
+
+# getopt argument parsing {{{
+args="$(getopt -o "hus" -l "help,user,system" -n "sd" -- "$@")" \
+    || { >&2 echo "Error parsing arguments!"; exit 1; }
+eval set -- "$args"
+
+cli_scope="--system"
+
+while true; do
+    case "$1" in
+        '-h'|'--help') echo "$USAGE"; exit 0 ;;
+        '-u'|'--user') cli_scope="--user"; shift ;;
+        '-s'|'--system') cli_scope="--system"; shift ;;
+        '--') shift; break ;;
+    esac
+done
+# }}}
+
+# grep -v '@\.' filters out uninstantiated templates
+unit_files="$(\
+    systemctl $cli_scope --quiet list-unit-files \
+        | cut --delimiter=' ' --fields=1 | grep -v '@\.')"
+
+
+# Preview Window {{{
+fzf_preview_cmd="env SYSTEMD_COLORS=1 systemctl $cli_scope status -- {}"
+fzf_preview_window="right,60%,border-left"
+fzf_preview_window="$fzf_preview_window,<100(up,50%,border-bottom)"
+# }}}
+
+# Key Bindings {{{
+
+bind_toggle_active='ctrl-a' # {{{
+cmd_toggle_active="\
+systemctl $cli_scope --quiet is-active {} \
+    && systemctl $cli_scope --quiet stop {} \
+    || systemctl $cli_scope --quiet start {}"
+fzf_header="${fzf_header}Toggle Active (start/stop): $bind_toggle_active
+" # This endquote needs to be on a separate line, to 'capture' a '\n'
+fzf_key_bindings="$bind_toggle_active:execute($cmd_toggle_active)+refresh-preview,$fzf_key_bindings"
+# }}}
+
+bind_toggle_enabled='ctrl-e' # {{{
+cmd_toggle_enabled="\
+systemctl $cli_scope --quiet is-enabled {} \
+    && systemctl $cli_scope --quiet disable {} \
+    || systemctl $cli_scope --quiet enable {}"
+fzf_header="${fzf_header}Toggle Enabled: $bind_toggle_enabled
+" # This endquote needs to be on a separate line, to 'capture' a '\n'
+fzf_key_bindings="$bind_toggle_enabled:execute($cmd_toggle_enabled)+refresh-preview,$fzf_key_bindings"
+# }}}
+
+# '--null-data' is used so that sed removes only the last comma in the bindings list
+fzf_key_bindings="$(printf '%s' "$fzf_key_bindings" | sed --null-data 's|\(.*\),|\1|')"
+
+# }}}
+
+fzf \
+    --ansi \
+    --prompt="Unit file: " --header="$fzf_header" --header-first \
+    --preview-window="$fzf_preview_window" --preview="$fzf_preview_cmd" \
+    --bind="esc:cancel" \
+    --bind="$fzf_key_bindings" \
+<< EOF
+$unit_files
+EOF
