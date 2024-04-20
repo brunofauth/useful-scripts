@@ -72,6 +72,13 @@ fzf_header="${fzf_header}Toggle Enabled: $bind_toggle_enabled
 fzf_key_bindings="$bind_toggle_enabled:execute($cmd_toggle_enabled)+refresh-preview,$fzf_key_bindings"
 # }}}
 
+bind_reload_or_restart='ctrl-r' # {{{
+cmd_reload_or_restart="systemctl $cli_scope --quiet reload-or-restart {}"
+fzf_header="${fzf_header}Reload or Restart: $bind_reload_or_restart
+" # This endquote needs to be on a separate line, to 'capture' a '\n'
+fzf_key_bindings="$bind_reload_or_restart:execute($cmd_reload_or_restart)+refresh-preview,$fzf_key_bindings"
+# }}}
+
 # '--null-data' is used so that sed removes only the last comma in the bindings list
 fzf_key_bindings="$(printf '%s' "$fzf_key_bindings" | sed --null-data 's|\(.*\),|\1|')"
 
