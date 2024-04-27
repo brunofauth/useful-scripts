@@ -1,19 +1,62 @@
-#! /usr/bin/env nu
+#! /bin/sh
+# vim: foldmethod=marker foldlevel=0 foldclose=all
 
+# Usage Message {{{
+USAGE="
+SYNOPSYS
+    ${0##*/} [options] [--] command...
 
-# Command description
-def main [
-    --work-dir: string # dir in which to run command, instead of cwd
-    command: string # the command to run
-    ...arguments: string # the command's arguments
-] {
-    let $resolved_dir = (
-        if $work_dir == null { $env.PWD }
-        else { $work_dir })
+DESCRIPTION
+    Run a CLI app as a dialog, in a terminal window
 
-    (exec kitty
-        --class="float-term"
-        --detach
-        --working-directory $resolved_dir
-        -- $command ...$arguments)
+OPTIONS
+    -h, --help
+        Displays this usage information and exits
+
+    -d --work-dir
+        Directory in which to run the command, instead of cwd
+
+NOTE
+    If you have to use flags in your command, be sure to prefix your command
+    with a double dash (--), like this:
+        ${0##*/} -- --copy
+" # }}}
+
+fatal() {
+    >&2 echo "$@"
+    exit 1
 }
+
+work_dir="$(pwd)"
+
+# getopt argument parsing {{{
+args="$(getopt -o "hd" -l "help,work-dir:" -n "as-dialogue" -- "$@")" \
+    || fatal "Error parsing arguments!"
+eval set -- "$args"
+
+while true; do
+    case "$1" in
+        '-h'|'--help')
+            echo "$USAGE"
+            exit 0
+            ;;
+        '-d'|'--work-dir')
+            shift
+            work_dir="$1"
+            shift
+            ;;
+        '--')
+            shift
+            break
+            ;;
+    esac
+done
+# }}}
+
+kitty \
+    --class="float-term" \
+    --detach \
+    --working-directory $work_dir \
+    -- \
+    "$@"
+
