@@ -1,0 +1,12 @@
+#! /bin/sh
+
+venv_path="$(pipx environment | grep '^PIPX_LOCAL_VENVS=' | cut -d= -f2)"
+[ -d "$venv_path" ] || { >&2 echo "Couldn't find PIPX_LOCAL_VENVS"; exit 1; }
+
+find "$venv_path" -mindepth 1 -maxdepth 1 -type d -print0 \
+    | xargs \
+            --verbose \
+            --no-run-if-empty \
+            --null \
+            --max-lines \
+        echo python3 -m venv --upgrade
