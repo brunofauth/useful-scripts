@@ -1,0 +1,17 @@
+#! /bin/sh
+
+fzf_output="$(tmux list-sessions | fzf -e -i --exit-0 --select-1)"
+fzf_status=$?
+session_id="$(cut -d: -f1 << EOF
+$fzf_output
+EOF
+)"
+
+#   0    Normal exit
+#   1    No match
+#   2    Error
+# 130    Interrupted with CTRL-C or ESC
+{ [ "$fzf_status" -eq 1 ] || [ "$fzf_status" -eq 130 ]; } && exit 0
+[ "$fzf_status" -ne 0 ] && exit 1
+
+exec tmux attach-session -t "$session_id"
