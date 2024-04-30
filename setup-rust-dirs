@@ -1,0 +1,74 @@
+#! /bin/sh
+# vim: foldmethod=marker foldlevel=0 foldclose=all
+# shellcheck disable=SC3043
+
+# Rustup and Cargo do not follow the XDG directory spec, and I'd like to be
+# able to delete the caches they use by deleteing ~/.cache, so I made this to
+# 'force' them to comply
+
+
+fatal() { >&2 echo "$@"; exit 1; }
+
+[ -d "$XDG_CONFIG_HOME" ] || fatal '"$XDG_CONFIG_HOME" is not set! Exiting!'
+[ -d "$XDG_CACHE_HOME" ] || fatal '"$XDG_CACHE_HOME" is not set! Exiting!'
+[ -d "$XDG_DATA_HOME" ]  || fatal '"$XDG_DATA_HOME" is not set! Exiting!'
+[ "$CARGO_HOME"  = "$XDG_DATA_HOME/cargo"  ] || fatal '"$CARGO_HOME" is not set or invalid!'
+[ "$RUSTUP_HOME" = "$XDG_DATA_HOME/rustup" ] || fatal '"$RUSTUP_HOME" is not set or invalid!'
+
+mkdir -p "$XDG_CONFIG_HOME"
+mkdir -p "$XDG_CACHE_HOME"
+mkdir -p "$XDG_DATA_HOME"
+
+
+make_home_dir() { # {{{
+    local old_home="$1"
+    local new_home="$2"
+
+    [ -d "$old_home" ] || {
+        mkdir --parents "$CARGO_HOME"
+        return 0
+    }
+    [ -d "$new_home" ] || {
+        >&2 echo "Found both '$old_home' and '$new_home'. Please delete one of them."
+        exit 1
+    }
+    mv "$HOME/.cargo" "$CARGO_HOME"
+} # }}}
+
+make_home_dir "$HOME/.cargo"  "$CARGO_HOME"
+make_home_dir "$HOME/.rustup" "$RUSTUP_HOME"
+
+
+mv_and_ln() {
+    local src="$1" # 
+    local dst="$2"
+
+    [ -d "$src" ] && mv "$src" "$dst"
+    mkdir -p "$dst"
+    ln -fsT "$dst" "$src"
+}
+
+cargo_cache="$XDG_CACHE_HOME/cargo"
+mkdir -p "$cargo_cache"
+mv_and_ln "$CARGO_HOME/registry" "$cargo_cache/registry"
+mv_and_ln "$CARGO_HOME/git" "$cargo_cache/git"
+
+cargo_config="$XDG_CONFIG_HOME/cargo"
+mkdir -p "$cargo_config"
+[ -f "$CARGO_HOME/config.toml" ] && ! [ -L "$CARGO_HOME/config.toml" ] \
+    && mv "$CARGO_HOME/config.toml" "$cargo_config"
+ln -fsT "$cargo_config/config.toml" "$CARGO_HOME/config.toml"
+
+
+rustup_cache="$XDG_CACHE_HOME/rustup"
+mkdir -p "$rustup_cache"
+mv_and_ln "$RUSTUP_HOME/downloads"     "$rustup_cache/downloads"
+mv_and_ln "$RUSTUP_HOME/tmp"           "$rustup_cache/tmp"
+mv_and_ln "$RUSTUP_HOME/toolchains"    "$rustup_cache/toolchains"
+mv_and_ln "$RUSTUP_HOME/update-hashes" "$rustup_cache/update-hashes"
+
+rustup_config="$XDG_CONFIG_HOME/rustup"
+mkdir -p "$rustup_config"
+[ -f "$RUSTUP_HOME/settings.toml" ] && ! [ -L "$RUSTUP_HOME/settings.toml" ] \
+    && mv "$RUSTUP_HOME/settings.toml" "$rustup_config"
+ln -fsT "$rustup_config/settings.toml" "$RUSTUP_HOME/settings.toml"
