@@ -1,0 +1,12 @@
+#! /bin/sh
+
+
+# https://superuser.com/questions/307541/copy-entire-file-system-hierarchy-from-one-drive-to-another
+# -a  : all files, with permissions, etc..
+# -x  : stay on one file system
+# -H  : preserve hard links (not included with -a)
+# -A  : preserve ACLs/permissions (not included with -a)
+# -X  : preserve extended attributes (not included with -a)
+# -W  : copy files whole (w/o delta-xfer algorithm)
+rsync -axHAXW --info=progress2 -- "$@"
+notify-send --app-name=cpfs --wait "cpfs" "Finished copying files"
