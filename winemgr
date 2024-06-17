@@ -59,12 +59,12 @@ key_del_prefix=ctrl-r
 fzf_header="$key_del_prefix: remove wineprefix
 ${fzf_header}"
 fzf_binds="$fzf_binds,$key_del_prefix:execute(
-    read -rp 'Remove wineprefix {-1}? (y/N) ' answer \
-        && case \"\$answer\" in
-            y|yes|Y|YES) rm -r {} ;;
-            n|no|N|NO) ;;
-            *) >&2 echo \"Invalid answer: \$answer\" ;;
-        esac
+    read -rp 'Remove wineprefix {-1}? (y/N) ' answer
+    case \"\$answer\" in
+        y|yes|Y|YES) rm -r {} ;;
+        n|no|N|NO) ;;
+        *) >&2 echo \"Invalid answer: \$answer\" ;;
+    esac
 )+reload($cmd_list_prefixes)"
 # }}}
 
