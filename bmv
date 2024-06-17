@@ -3,6 +3,7 @@
 
 
 # Usage Message {{{
+
 USAGE="
 SYNOPSYS
     ${0##*/} [options] [files...]
@@ -33,7 +34,9 @@ NOTE
         ${0##*/} -- --copy
     This will rename a file called '--copy', instead of activating the
     '--copy' switch.
-" # }}}
+"
+
+# }}}
 
 fatal() {
     >&2 echo "$@"
@@ -89,7 +92,7 @@ done
 
 src_files="$(mktemp bmv-src.XXXXXXXXXX --tmpdir)"
 ls_flags=""
-[ "$DO_DOT" = 1 ] && ls_flags="$ls_flags -a"
+[ "$DO_DOT" = 1 ] && ls_flags="$ls_flags --all"
 [ "$DO_SORT_BY_TIME" = 1 ] && ls_flags="$ls_flags -t"
 [ "$DO_DIRS_FIRST" = 1 ] && ls_flags="$ls_flags --group-directories-first"
 

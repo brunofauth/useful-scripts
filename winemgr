@@ -1,0 +1,107 @@
+#! /bin/sh
+# vim: foldmethod=marker foldlevel=0 foldclose=all
+
+
+# Usage Message {{{
+USAGE="
+SYNOPSYS
+    ${0##*/} [options] [executable]
+
+DESCRIPTION
+    View and manage wineprefixes
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits
+" # }}}
+
+# getopt argument parsing {{{
+args="$(getopt -o "h" -l "help" -n "winemgr" -- "$@")" \
+    || { >&2 echo "Error parsing arguments!"; exit 1; }
+eval set -- "$args"
+
+while true; do
+    case "$1" in
+        '-h'|'--help') echo "$USAGE"; exit 0 ;;
+        '--') shift; break ;;
+    esac
+done
+# }}}
+
+
+target_executable="$1"
+prefixes_home="${XDG_DATA_HOME:-$HOME/.local/share}/wine-prefixes"
+cmd_list_prefixes="find $prefixes_home -mindepth 1 -maxdepth 1 -type d -print0"
+fzf_binds="esc:cancel"
+
+
+# Create new $WINEPREFIX{{{
+key_add_prefix=ctrl-a
+fzf_header="$key_add_prefix: add a new wineprefix
+${fzf_header}"
+fzf_binds="$fzf_binds,$key_add_prefix:execute(
+    read -rp 'Enter a name for the wineprefix to be created: ' \
+        prefix_name
+    [ -z \"\$prefix_name\" ] && {
+        >&2 echo 'No name given. Exiting.'
+        exit 1
+    }
+    [ -d \"$prefixes_home/\$prefix_name\" ] && {
+        >&2 echo 'A wineprefix with that name already exists. Exiting.'
+        exit 1
+    }
+    mkdir \"$prefixes_home/\$prefix_name\"
+)+reload($cmd_list_prefixes)"
+# }}}
+
+# Remove $WINEPREFIX{{{
+key_del_prefix=ctrl-r
+fzf_header="$key_del_prefix: remove wineprefix
+${fzf_header}"
+fzf_binds="$fzf_binds,$key_del_prefix:execute(
+    read -rp 'Remove wineprefix {-1}? (y/N) ' answer \
+        && case \"\$answer\" in
+            y|yes|Y|YES) rm -r {} ;;
+            n|no|N|NO) ;;
+            *) >&2 echo \"Invalid answer: \$answer\" ;;
+        esac
+)+reload($cmd_list_prefixes)"
+# }}}
+
+# Run winetricks on $WINEPREFIX{{{
+key_winetricks_prefix=ctrl-t
+fzf_header="$key_winetricks_prefix: run winetricks on a wineprefix
+${fzf_header}"
+fzf_binds="$fzf_binds,$key_winetricks_prefix:execute(env WINEPREFIX={} winetricks)+reload($cmd_list_prefixes)"
+# }}}
+
+# Add/Remove program on $WINEPREFIX{{{
+key_programs_prefix=ctrl-p
+fzf_header="$key_programs_prefix: add/remove program on a wineprefix
+${fzf_header}"
+fzf_binds="$fzf_binds,$key_programs_prefix:execute(env WINEPREFIX={} wine control appwiz.cpl)"
+# }}}
+
+# Sandbox $WINEPREFIX{{{
+key_sandbox_prefix=ctrl-s
+fzf_header="$key_sandbox_prefix: sandbox this wineprefix
+${fzf_header}"
+fzf_binds="$fzf_binds,$key_sandbox_prefix:execute(env WINEPREFIX={} winetricks sandbox)"
+# }}}
+
+
+chosen_prefix="$($cmd_list_prefixes \
+    | fzf -e -i --read0 --prompt 'Pick a $WINEPREFIX: ' --with-nth='-1' --delimiter='/' \
+        --bind="$fzf_binds" --header="$fzf_header" --header-first 
+)"
+
+[ $? -ne 0 ] && {
+    >&2 echo "No prefix selected. Exiting."
+    exit 1
+}
+
+[ -z "$target_executable" ] && {
+    exit 0
+}
+
+exec env WINEPREFIX="$chosen_prefix" wine start /unix "$target_executable"
