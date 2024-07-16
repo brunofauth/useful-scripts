@@ -1,0 +1,95 @@
+#! /bin/sh
+# vim: foldmethod=marker foldlevel=0 foldclose=all
+
+
+# Usage Message {{{
+
+USAGE="
+SYNOPSYS
+    ${0##*/} [options] <website-url>
+
+DESCRIPTION
+    Recursive download a static website.
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits
+
+    -u, --user-agent=UA
+        User-Agent header to use
+
+    -d, --directory=PATH
+        Where to put downloaded files
+
+    -w, --wait=SECONDS
+        Time to sleep between retrievals
+"
+
+# }}}
+
+# getopt argument parsing {{{
+args="$(getopt -o "hu:d:" -l "help,user-agent:,directory:" -n "cpws" -- "$@")" \
+    || { >&2 echo "Error parsing arguments!"; exit 1; }
+eval set -- "$args"
+
+while true; do
+    case "$1" in
+        -h|--help)
+            >&2 echo "$USAGE"
+            exit 0
+            ;;
+        -u|--user-agent)
+            shift
+            arg_user_agent="$1"
+            shift
+            ;;
+        -d|--directory)
+            shift
+            arg_directory="$1"
+            shift
+            ;;
+        -w|--wait)
+            shift
+            arg_wait="$1"
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+    esac
+done
+# }}}
+
+# Sanity checks for option values {{{
+
+[ -z "$arg_user_agent" ] && {
+    arg_user_agent="$(fua)" || {
+        >&2 echo "'--user-agent' not used and 'fua' script not found"
+        exit 1
+    }
+}
+
+[ -z "$arg_directory" ] && {
+    arg_directory="$(pwd)"
+}
+mkdir -p "$arg_directory"
+
+[ -z "$arg_wait" ] && {
+    arg_wait=0.5
+}
+
+# }}}
+
+
+target_url="$1"
+target_domain="$(echo "$target_domain" | perl -pe 's|(https?://)?(.*)|\2|g')"
+
+exec wget \
+    --no-verbose --progress=bar --show-progress \
+    --directory-prefix="$arg_directory" \
+    --user-agent="$arg_user_agent" \
+    --wait="$arg_wait" --random-wait \
+    --recursive --level=inf --convert-links --page-requisites --domains="$target_domain" \
+    "$target_url"
+
