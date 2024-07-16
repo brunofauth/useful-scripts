@@ -15,7 +15,7 @@ enum_wallpapers() {
 wallpaper_dirs="/usr/share/backgrounds/"
 wallpaper_dirs="$wallpaper_dirs:/usr/share/wallpapers/"
 
-wallpaper="$(enum_wallpapers "$wallpaper_dirs" | sxiv -to -)"
+wallpaper="$(enum_wallpapers "$wallpaper_dirs" | nsxiv -to -)"
 [ -n "$wallpaper" ] || exit 0
 
 ln -sT "$wallpaper" "${XDG_CONFIG_HOME:-$HOME/.config}/wallpaper"

@@ -1,33 +1,60 @@
 #! /bin/sh
+# vim: foldmethod=marker foldlevel=0
 
 
-yay_install_opts="--sudoloop --removemake --answerdiff None"
-yay_get_packages_cmd="yay --color=always --singlelineresults -Ss"
-# yay_get_packages_cmd="yay --aur --color=always --singlelineresults -Ss"
-sed_fmt_yay_results='sed -E "s|^(\S+) [^\t]+\t|\1\t|g"'
+aurfzf_cache_dir="${XDG_CACHE_DIR:-$HOME/.cache}/aurfzf"
+mkdir -p "$aurfzf_cache_dir/core"
+mkdir -p "$aurfzf_cache_dir/extra"
+mkdir -p "$aurfzf_cache_dir/community"
+mkdir -p "$aurfzf_cache_dir/multilib"
+mkdir -p "$aurfzf_cache_dir/aur"
 
+yay_install_opts="\
+    --sudoloop --removemake --norebuild \
+    --answerclean None --answerdiff None --answeredit None --answerupgrade None"
+yay_get_packages_cmd='yay --color=always -Ss'
+yay_fmt_lines='xargs -d "\n" printf "%s\n%s\0"'
 
-fzf_header="(Shift-)Tab to (de)select -||- ctrl + [S]earch, [I]nstall"
-fzf_bind_cmds="\
-ctrl-s:reload(echo {q} | xargs -r $yay_get_packages_cmd | $sed_fmt_yay_results)+clear-query,\
-ctrl-i:become(echo {+} | sed -E 's:^[^/]+/(\\S+) .+:\\1:' | xargs -r yay $yay_install_opts -S),\
-esc:cancel\
+# Keybindings {{{
+fzf_keybindings=""
+fzf_header=""
+
+add_keybinding() {
+    local binding="$1"
+    local cmd="$2"
+    local header_entry="$3"
+    fzf_keybindings="$binding:$cmd,$fzf_keybindings"
+    fzf_header="${fzf_header}${header_entry}: ${binding}
 "
-fzf_preview_cmd="yay --color=always -Si {1}"
-# fzf_preview_cmd="yay --aur --color=always -Si {1}"
-fzf_preview_window="bottom,40%"
-fzf_default_cmd="echo -n" # If no package is given, start with an empty slate
-
-
-fatal() {
-    >&2 echo "$@"
-    exit 1
 }
+
+add_keybinding \
+    'ctrl-s' \
+    "reload($yay_get_packages_cmd {q} | $yay_fmt_lines)+clear-query" \
+    "search packages"
+add_keybinding \
+    'ctrl-i' \
+    "become(echo {1} | xargs -d '\n' -r yay $yay_install_opts -S)" \
+    "install selected packages"
+add_keybinding \
+    'ctrl-f' \
+    "preview(yay --color=always -Si {1} | tee $aurfzf_cache_dir/{1})" \
+    "force refetch preview"
+
+fzf_keybindings="${fzf_keybindings}esc:cancel"
+# }}}
+
+fzf_preview_cmd="\
+    cat $aurfzf_cache_dir/{1} 2>/dev/null \
+    || { yay --color=always -Si {1} | tee $aurfzf_cache_dir/{1}; }"
+fzf_preview_window="right,60%,border-left"
+fzf_preview_window="$fzf_preview_window,<100(up,50%,border-bottom)"
+fzf_default_cmd="echo -n" # If no package is given, start with an empty slate
 
 
 fzf_search_or_default() {
     [ $# -lt 1 ] && eval "$fzf_default_cmd" && return 0
-    eval "$yay_get_packages_cmd" '"$@"' | eval "$sed_fmt_yay_results"
+    eval "$yay_get_packages_cmd" '"$@"' | eval "$yay_fmt_lines"
 }
 
 
@@ -38,11 +65,13 @@ main() {
         --info=inline \
         --header="$fzf_header" \
         --header-first \
-        --bind="$fzf_bind_cmds" \
+        --bind="$fzf_keybindings" \
         --preview="$fzf_preview_cmd" \
-        --preview-window="$fzf_preview_window" 
+        --preview-window="$fzf_preview_window" \
+        --read0
 }
 
 
 main "$@"
+rm -r "$aurfzf_cache_dir"
 

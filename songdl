@@ -4,7 +4,7 @@
 song_list="$(mktemp songdl.XXXXXXXXXX --tmpdir)"
 
 if [ -t 0 ]; then
-    echo "# Write song names to query and download" > "$song_list"
+    printf "# Write song names to query and download\n\n" > "$song_list"
     editor="${EDITOR:-vim}" 
     which "$editor" >/dev/null 2>&1 ||exit 1
     "$editor" "$song_list"
