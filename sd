@@ -1,5 +1,5 @@
 #! /bin/sh
-# vim: foldmethod=marker foldlevel=0 foldclose=all
+# vim: foldmethod=marker foldlevel=0
 
 
 # Usage Message {{{
@@ -18,7 +18,7 @@ OPTIONS
         Talk to the calling user's service manager, instead of the system's
 
     -s, --system
-        Talk to the service manager of the system. This is the implied default.
+        Talk to the service manager of the system. This is the implied by default.
 " # }}}
 
 # getopt argument parsing {{{
@@ -52,44 +52,55 @@ fzf_preview_window="$fzf_preview_window,<100(up,50%,border-bottom)"
 
 # Key Bindings {{{
 
-bind_toggle_active='ctrl-a' # {{{
+fzf_keybindings="${fzf_keybindings}esc:cancel"
+fzf_header=""
+
+add_keybinding() {
+    local binding="$1"
+    local cmd="$2"
+    local header_entry="$3"
+    fzf_keybindings="$fzf_keybindings,$binding:$cmd"
+    fzf_header="${fzf_header}${header_entry}: ${binding}
+"
+}
+
+# bind 'Toggle Active' {{{
 cmd_toggle_active="\
 systemctl $cli_scope --quiet is-active {} \
     && systemctl $cli_scope --quiet stop {} \
     || systemctl $cli_scope --quiet start {}"
-fzf_header="${fzf_header}Toggle Active (start/stop): $bind_toggle_active
-" # This endquote needs to be on a separate line, to 'capture' a '\n'
-fzf_key_bindings="$bind_toggle_active:execute($cmd_toggle_active)+refresh-preview,$fzf_key_bindings"
+add_keybinding \
+    'ctrl-a' \
+    "execute($cmd_toggle_active)+refresh-preview" \
+    "Toggle Active (start/stop)"
 # }}}
 
-bind_toggle_enabled='ctrl-e' # {{{
+# bind 'Toggle Enabled' {{{
 cmd_toggle_enabled="\
 systemctl $cli_scope --quiet is-enabled {} \
     && systemctl $cli_scope --quiet disable {} \
     || systemctl $cli_scope --quiet enable {}"
-fzf_header="${fzf_header}Toggle Enabled: $bind_toggle_enabled
-" # This endquote needs to be on a separate line, to 'capture' a '\n'
-fzf_key_bindings="$bind_toggle_enabled:execute($cmd_toggle_enabled)+refresh-preview,$fzf_key_bindings"
+add_keybinding \
+    'ctrl-e' \
+    "execute($cmd_toggle_enabled)+refresh-preview" \
+    "Toggle Enabled"
 # }}}
 
-bind_reload_or_restart='ctrl-r' # {{{
+# bind 'Reload or Restart' {{{
 cmd_reload_or_restart="systemctl $cli_scope --quiet reload-or-restart {}"
-fzf_header="${fzf_header}Reload or Restart: $bind_reload_or_restart
-" # This endquote needs to be on a separate line, to 'capture' a '\n'
-fzf_key_bindings="$bind_reload_or_restart:execute($cmd_reload_or_restart)+refresh-preview,$fzf_key_bindings"
+add_keybinding \
+    'ctrl-r' \
+    "execute($cmd_reload_or_restart)+refresh-preview" \
+    'Reload or Restart'
 # }}}
-
-# '--null-data' is used so that sed removes only the last comma in the bindings list
-fzf_key_bindings="$(printf '%s' "$fzf_key_bindings" | sed --null-data 's|\(.*\),|\1|')"
 
 # }}}
 
 fzf \
-    --ansi \
+    --ansi --info=inline \
     --prompt="Unit file: " --header="$fzf_header" --header-first \
     --preview-window="$fzf_preview_window" --preview="$fzf_preview_cmd" \
-    --bind="esc:cancel" \
-    --bind="$fzf_key_bindings" \
+    --bind="$fzf_keybindings" \
 << EOF
 $unit_files
 EOF

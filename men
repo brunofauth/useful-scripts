@@ -7,12 +7,14 @@ enter:execute(echo {+} | xargs --max-args 2 man)+clear-selection,\
 esc:cancel\
 "
 
+fzf_preview_window="right,75%,border-left"
+fzf_preview_window="$fzf_preview_window,<100(up,75%,border-bottom)"
+
 man -k . \
     | sed 's|\(\S\+\)\s\+(\(\S\+\)).\+|\2\t\t\1|' \
     | fzf \
-        -i -m --exact --cycle \
-        --info=inline \
+        -i -m -e --info=inline \
         --header="Shift + Up/Down to scroll. ESC to quit." --header-first \
-        --preview "man '{}'" \
+        --preview "man '{}'" --preview-window="$fzf_preview_window" \
         --bind="$FZF_BIND_COMMANDS" \
         --query="!^3 " # Do not show, by default, (C, CPP, etc...) functions
