@@ -89,6 +89,13 @@ ${fzf_header}"
 fzf_binds="$fzf_binds,$key_sandbox_prefix:execute(env WINEPREFIX={} winetricks sandbox)"
 # }}}
 
+# Stop wineserver at $WINEPREFIX{{{
+key_stop_server=ctrl-s
+fzf_header="$key_stop_server: stop wineserver at this wineprefix
+${fzf_header}"
+fzf_binds="$fzf_binds,$key_stop_server:execute(env WINEPREFIX={} wineserver -k)"
+# }}}
+
 
 chosen_prefix="$($cmd_list_prefixes \
     | fzf -e -i --read0 --prompt 'Pick a $WINEPREFIX: ' --with-nth='-1' --delimiter='/' \
