@@ -1,6 +1,11 @@
 #! /bin/sh
 
 
+fzf_initial_query="!^3 " # Do not show, by default, (C, CPP, etc...) functions
+[ -n "$1" ] && {
+    fzf_initial_query="${fzf_initial_query}$1"
+}
+
 FZF_BIND_COMMANDS="\
 ctrl-r:change-preview-window(top,75%|right,50%),\
 enter:execute(echo {+} | xargs --max-args 2 man)+clear-selection,\
@@ -17,4 +22,4 @@ man -k . \
         --header="Shift + Up/Down to scroll. ESC to quit." --header-first \
         --preview "man '{}'" --preview-window="$fzf_preview_window" \
         --bind="$FZF_BIND_COMMANDS" \
-        --query="!^3 " # Do not show, by default, (C, CPP, etc...) functions
+        --query="$fzf_initial_query"
