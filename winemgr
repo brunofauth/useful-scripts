@@ -90,7 +90,7 @@ fzf_binds="$fzf_binds,$key_sandbox_prefix:execute(env WINEPREFIX={} winetricks s
 # }}}
 
 # Stop wineserver at $WINEPREFIX{{{
-key_stop_server=ctrl-s
+key_stop_server=ctrl-k
 fzf_header="$key_stop_server: stop wineserver at this wineprefix
 ${fzf_header}"
 fzf_binds="$fzf_binds,$key_stop_server:execute(env WINEPREFIX={} wineserver -k)"

@@ -4,14 +4,16 @@
 pics_dir="${XDG_PICTURES_DIR:-$HOME/pics}"
 mkdir --parents "$pics_dir"
 
-win_name="$(xdotool getactivewindow getwindowname \
+# win_name="$(xdotool getactivewindow getwindowname \
+win_name="$(xdotool getactivewindow getwindowclassname \
     | remove-diacritics \
     | tr " _\t" "---" \
     | tr -d "()[]'\"{}" \
     | tr --squeeze-repeats "-" \
     | tr "[:upper:]" "[:lower:]")"
 
-file_name="$(date +%Y-%m-%d_%H-%M-%S.%N)_$win_name.png"
+# %3N == the three first digits from the nanoseconds == our milliseconds
+file_name="$(date +%Y-%m-%d_%H-%M-%S.%3N)_$win_name.png"
 
 flameshot full --raw > "$pics_dir/$file_name"
 notify-send \
