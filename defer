@@ -1,0 +1,67 @@
+#! /bin/sh
+
+
+g_sleep_delay=0.2
+g_until_process=
+
+
+# Usage Message {{{
+
+USAGE="
+SYNOPSYS
+    ${0##*/} [options] -- command [args...]
+
+DESCRIPTION
+    Defer the execution of a command until after something happens
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits
+
+    -d --sleep-delay=<DELAY>
+        How much to wait before polling again, in seconds. (default=$g_sleep_delay)
+
+    -p, --until-process=<NAME>
+        Defer execution until a process named NAME exists
+
+EXAMPLE
+    ${0##*/} --until-process=Xorg ~/.my-startup-script.sh
+"
+
+# }}}
+
+
+fatal() { # {{{
+    >&2 echo "$@"
+    exit 1
+} # }}}
+
+
+main() {
+    # parse CLI args {{{
+    args="$(getopt -o "hd:p:" -l "help,sleep-delay:,until-process:" -n "defer" -- "$@")" \
+        || fatal "Error parsing arguments!"
+    eval set -- "$args"
+
+    while true; do
+        case "$1" in
+            '-h'|'--help') >&2 echo "$USAGE"; exit 0 ;;
+            '-d'|'--sleep-delay')   shift; g_sleep_delay="$1";   shift ;;
+            '-p'|'--until-process') shift; g_until_process="$1"; shift ;;
+            '--') shift; break ;;
+        esac
+    done
+    # }}}
+
+    while true; do
+        if [ -n "$g_until_process" ] && pgrep -i "$g_until_process"; then
+            break
+        fi
+        sleep "$g_sleep_delay"
+    done
+
+    exec "$@"
+}
+
+
+main "$@"
