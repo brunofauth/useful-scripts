@@ -51,8 +51,8 @@ enter:ignore"
 
 # Preview window settings and bindings (rotation) {{{
 key_rotate=ctrl-r
-wide_preview=right,70%,wrap
-tall_preview=top,60%,wrap
+wide_preview=right,70%
+tall_preview=top,60%
 _col_count="$(stty -a | grep -Po '(?<=columns )\d+')"
 if [ "$_col_count" -ge 160 ]; then
     fzf_preview_window=$wide_preview

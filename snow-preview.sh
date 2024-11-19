@@ -12,11 +12,15 @@ preview_for_binary() {
     echo "No suitable preview for binary: '$1'"
 }
 
+
+cmd_bat="bat --color=always --style=numbers"
+
 file_type="$(file --mime-type --brief "$1")"
 case "$file_type" in
     text/*) bat --color always --style="numbers" "$1";;
-    application/x-shellscript) bat --color always --style="numbers" "$1";;
-    application/x-perl) bat --color always --style="numbers" "$1";;
+    application/x-shellscript) $cmd_bat "$1";;
+    application/x-perl)        $cmd_bat "$1";;
+    application/json)          $cmd_bat "$1";;
     application/pdf) pdfinfo "$1" || pdftotext "$1" - ;;
     application/zip) zipinfo "$1" ;;
     image/*) iinfo "$1" ;;
@@ -24,11 +28,12 @@ case "$file_type" in
     audio/*) ffprobe -hide_banner "$1" ;;
     application/x-pie-executable) preview_for_binary "$1" ;;
     application/x-7z-compressed) 7z l "$1" ;;
-    application/gzip) 7z l "$1" ;;
-    application/zstd) 7z l "$1" ;;
-    application/x-bzip2) 7z l "$1" ;;
-    application/x-tar) 7z l "$1" ;;
+    application/gzip)            7z l "$1" ;;
+    application/zstd)            7z l "$1" ;;
+    application/x-bzip2)         7z l "$1" ;;
+    application/x-tar)           7z l "$1" ;;
     application/x-bittorrent) aria2c --show-files "$1" | sed -e '1,/^Files:/ d' ;;
+    inode/x-empty) echo "Empty file: $1" ;;
     *) echo "No suitable preview for file of type: $file_type"
 esac
 
