@@ -1,4 +1,5 @@
 #! /bin/sh
+# vim: foldmethod=marker foldlevel=0
 
 
 g_sleep_delay=0.2
