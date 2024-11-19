@@ -1,13 +1,34 @@
 #! /usr/bin/sh
 
 
-file_discovery() {
-    if which rg >/dev/null; then
-        rg --files --null "$@"
-    else
-        find "$@" -path '*/.*' -prune -or -type f -print0
-    fi
-}
+# Usage Message {{{
+USAGE="
+SYNOPSYS
+    ${0##*/} [options] -- [directories...]
+
+DESCRIPTION
+    List files in one or more directory trees and do something with them. If no
+    root directory is given, the CWD is used.
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits
+
+NOTE
+    If the names of your directories conflict with those of the flags, put them
+    after a double dash (--), like this:
+        ${0##*/} -- --help
+    This will act upon a directory called '--help', instead of activating the
+    '--help' switch.
+"
+# }}}
+
+
+fatal() { # {{{
+    >&2 echo "$@"
+    exit 1
+} # }}}
+
 
 PREVIEW_SCRIPT="${SCRIPTS:-$HOME/scripts}/snow-preview.sh" 
 BAT_PAGER="bat --paging=always --style=plain"
@@ -15,30 +36,58 @@ BAT_PAGER="bat --paging=always --style=plain"
 FZF_HEADER="\
 Files from: ${*:-"$(pwd)"}
 (Shift-)Tab to (de)select
-Ctrl + ([V]im | [L]ess | [O]pen | [P]rint | [Y]ank | [W]rap | [R]otate)"
+Ctrl + ( [V]im  [L]ess  [O]pen  [P]rint  [Y]ank  [W]rap  [R]otate )"
 
-FZF_BIND_COMMANDS="\
+fzf_bind_commands="\
 ctrl-v:become(${EDITOR:-vim} -p {+}),\
 ctrl-l:execute(echo {+} | xargs printf '%s\0' | xargs -0I [file] sh -c '$PREVIEW_SCRIPT [file] | $BAT_PAGER')+clear-selection,\
 ctrl-o:become(echo {+} | xargs --max-args=1 detach xdg-open),\
 ctrl-p:accept-non-empty,\
 ctrl-y:execute(printf '%s\n' {+} | xsel -ib),\
 ctrl-w:toggle-preview-wrap,\
-ctrl-r:change-preview-window(right,70%|top,60%),\
 esc:cancel,\
 enter:ignore" 
 
+
+# Preview window settings and bindings (rotation) {{{
+key_rotate=ctrl-r
+wide_preview=right,70%,wrap
+tall_preview=top,60%,wrap
+_col_count="$(stty -a | grep -Po '(?<=columns )\d+')"
+if [ "$_col_count" -ge 160 ]; then
+    fzf_preview_window=$wide_preview
+    fzf_bind_commands="$fzf_bind_commands,$key_rotate:change-preview-window($tall_preview|$wide_preview)"
+else
+    fzf_preview_window=$tall_preview
+    fzf_bind_commands="$fzf_bind_commands,$key_rotate:change-preview-window($wide_preview|$tall_preview)"
+fi
+# }}}
+
+
 main() {
-    file_discovery "$@" \
+
+    # getopt argument parsing {{{
+    args="$(getopt -o "h" -l "help" -n "snow" -- "$@")" \
+        || fatal "Error parsing arguments!"
+    eval set -- "$args"
+
+    while true; do
+        case "$1" in
+            '-h'|'--help') >&2 echo "$USAGE"; exit 0 ;;
+            '--') shift; break ;;
+        esac
+    done
+    # }}}
+
+    rg --files --null "$@" \
         | sort -z \
         | fzf \
             -i --multi \
             --read0 --print0 \
             --info=inline --header="$FZF_HEADER" --header-first \
             --preview="$PREVIEW_SCRIPT {}" \
-            --preview-window="right,70%,wrap"\
-            --bind="$FZF_BIND_COMMANDS" \
-        | xargs -r0 --max-args=1
+            --preview-window="$fzf_preview_window" \
+            --bind="$fzf_bind_commands"
 }
 
 main "$@"

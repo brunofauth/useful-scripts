@@ -58,7 +58,7 @@ eval set -- "$args"
 while true; do
     case "$1" in
         '-h'|'--help')
-            echo "$USAGE"
+            >&2 echo "$USAGE"
             exit 0
             ;;
         '-c'|'--copy')
