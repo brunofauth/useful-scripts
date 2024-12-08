@@ -1,38 +1,98 @@
 #! /usr/bin/env python3
 
+from __future__ import annotations
 
-import fire
+
+import argparse as ap
+import enum
+import logging
+import typing
 import re
+import sys
 
-from typing import TextIO, Iterator
+if typing.TYPE_CHECKING:
+    from collections.abc import Iterator
+    from typing import TextIO
+
+_logger = logging.getLogger(__name__)
+_LOGGER_LEVELS = [logging.WARNING, logging.INFO, logging.DEBUG]
 
 
-def iter_segments(fd: TextIO, regex: re.Pattern) -> Iterator[list[str]]:
+class MarkerDst(enum.StrEnum):
+    DISCARD = "discard"
+    KEEP_AS_TAIL = "tail"
+    KEEP_AS_HEADER = "header"
+
+
+def iter_chunks(
+    src_stream: TextIO,
+    regex: re.Pattern,
+    marker_dst: MarkerDst,
+) -> Iterator[list[str]]:
     lines = []
-    for line in fd:
+    for line in src_stream:
         if not regex.match(line):
             lines.append(line)
-        else:
+            continue
+        if marker_dst is MarkerDst.KEEP_AS_TAIL:
+            lines.append(line)
+            yield lines
+            lines = []
+        elif marker_dst is MarkerDst.KEEP_AS_HEADER:
             yield lines
             lines = [line]
+        elif marker_dst is MarkerDst.DISCARD:
+            yield lines
+            lines = []
+        else:
+            assert False, "unhandled edge case"
     yield lines
 
 
-def main(
-    regex: str,
-    big_file: str,
-    out_format: str="{i:0=3d}",
-    max_chunks: int = 0
-) -> None:
-    with open(big_file) as src:
-        pattern = re.compile(regex)
-        for i, lines in enumerate(iter_segments(src, pattern)):
-            with open(out_format.format(i=i), "w") as dst:
+# https://stackoverflow.com/questions/18275023/
+class CustomHelpFormatter(ap.HelpFormatter):
+    def _format_action_invocation(self, action: ap.Action) -> str:
+        if not action.option_strings or action.nargs == 0:
+            return super()._format_action_invocation(action)
+        default = self._get_default_metavar_for_optional(action)
+        args_string = self._format_args(action, default)
+        return ', '.join(action.option_strings) + ' ' + args_string
+
+
+def get_cli() -> ap.Namespace:
+    parser = ap.ArgumentParser(formatter_class=CustomHelpFormatter)
+    parser.add_argument('pattern', help="PCRE2 pattern to find the markers at which the file should be split")
+    parser.add_argument('input_file', default='-', help="If missing, data is read from stdin")
+    parser.add_argument('-f', '--output_format', default="fsplit-out-{i:03d}.txt")
+    parser.add_argument('-m', '--marker_dst', choices=[d.value for d in MarkerDst],
+                        default=MarkerDst.KEEP_AS_HEADER,
+                        help="What to do with the marker line after it's identified")
+    parser.add_argument('-v', '--verbose', action='count', default=0)
+    return parser.parse_args()
+
+
+def _main_impl(
+    pattern: str,
+    input_file: str,
+    output_format: str,
+    marker_dst: str,
+    verbose: int,
+) -> int:
+    clamped_level = min(max(verbose, 0), len(_LOGGER_LEVELS) - 1)
+    logging.basicConfig(level=_LOGGER_LEVELS[clamped_level])
+    
+    re_pattern = re.compile(pattern)
+    with (sys.stdin if input_file == '-' else open(input_file)) as src:
+        for i, lines in enumerate(iter_chunks(src, re_pattern, MarkerDst(marker_dst))):
+            with open(output_format.format(i=i), "w") as dst:
                 dst.writelines(lines)
-            if max_chunks > 0 and max_chunks - 1 >= i:
-                break
+    
+    return 0
+
+
+def main() -> None:
+    raise SystemExit(_main_impl(**vars(get_cli())))
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
-
+    main()
