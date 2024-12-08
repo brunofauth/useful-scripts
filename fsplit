@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 import argparse as ap
 import enum
 import logging
@@ -51,6 +50,9 @@ def iter_chunks(
 
 # https://stackoverflow.com/questions/18275023/
 class CustomHelpFormatter(ap.HelpFormatter):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs, indent_increment=4)
+
     def _format_action_invocation(self, action: ap.Action) -> str:
         if not action.option_strings or action.nargs == 0:
             return super()._format_action_invocation(action)
@@ -58,16 +60,75 @@ class CustomHelpFormatter(ap.HelpFormatter):
         args_string = self._format_args(action, default)
         return ', '.join(action.option_strings) + ' ' + args_string
 
+    def _get_help_string(self, action: ap.Action) -> str:
+        """Add the default value to the option help message."""
+        help_str = '' if action.help is None else action.help
+        if '%(default)' not in help_str:
+            if action.default is not ap.SUPPRESS:
+                defaulting_nargs = [ap.OPTIONAL, ap.ZERO_OR_MORE]
+                if action.option_strings or action.nargs in defaulting_nargs:
+                    help_str += " (default='%(default)s')"
+        return help_str
+
+    def _format_action(self, action: ap.Action) -> str:
+        # determine the required width and the entry label
+        # help_position = min(self._action_max_length + 2,
+        #                     self._max_help_position)
+        help_position = self._current_indent + self._indent_increment
+        help_width = max(self._width - help_position, 11)
+        action_header = self._format_action_invocation(action)
+
+        # no help; start on same line and add a final newline
+        if not action.help:
+            tup = self._current_indent, '', action_header
+            action_header = '%*s%s\n' % tup
+
+        # long action name; start on the next line
+        else:
+            tup = self._current_indent, '', action_header
+            action_header = '%*s%s\n' % tup
+            indent_first = help_position
+
+        # collect the pieces of the action help
+        parts = [action_header]
+
+        # if there was help for the action, add lines of help text
+        if action.help and action.help.strip():
+            help_text = self._expand_help(action)
+            if help_text:
+                help_lines = self._split_lines(help_text, help_width)
+                parts.append('%*s%s\n' % (indent_first, '', help_lines[0]))
+                for line in help_lines[1:]:
+                    parts.append('%*s%s\n' % (help_position, '', line))
+
+        # or add a newline if the description doesn't end with one
+        elif not action_header.endswith('\n'):
+            parts.append('\n')
+        parts.append('\n')
+
+        # if there are any sub-actions, add their help as well
+        for subaction in self._iter_indented_subactions(action):
+            parts.append(self._format_action(subaction))
+
+        # return a single string
+        return self._join_parts(parts)
+
 
 def get_cli() -> ap.Namespace:
-    parser = ap.ArgumentParser(formatter_class=CustomHelpFormatter)
-    parser.add_argument('pattern', help="PCRE2 pattern to find the markers at which the file should be split")
-    parser.add_argument('input_file', default='-', help="If missing, data is read from stdin")
-    parser.add_argument('-f', '--output_format', default="fsplit-out-{i:03d}.txt")
-    parser.add_argument('-m', '--marker_dst', choices=[d.value for d in MarkerDst],
-                        default=MarkerDst.KEEP_AS_HEADER,
-                        help="What to do with the marker line after it's identified")
-    parser.add_argument('-v', '--verbose', action='count', default=0)
+    parser = ap.ArgumentParser(formatter_class=CustomHelpFormatter, add_help=False)
+
+    pos_args = parser.add_argument_group("POSITIONAL ARGUMENTS")
+    pos_args.add_argument('pattern', help="PCRE2 pattern to find the markers at which the file should be split")
+    pos_args.add_argument('input_file', default='-', help="If missing, data is read from stdin")
+
+    opt_args = parser.add_argument_group("OPTIONS")
+    opt_args.add_argument('-h', '--help', action='help', default=ap.SUPPRESS, help='Show this help message and exit')
+    opt_args.add_argument('-v', '--verbose', action='count', default=0, help="Can be used up to two times")
+    opt_args.add_argument('-f', '--output_format', default="fsplit-out-{i:03d}.txt", help="Formatting pattern for output file names")
+    opt_args.add_argument('-m', '--marker_dst', choices=[d.value for d in MarkerDst],
+                          default=MarkerDst.KEEP_AS_HEADER,
+                          help="What to do with the marker line after it's identified")
+
     return parser.parse_args()
 
 
