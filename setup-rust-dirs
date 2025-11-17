@@ -25,14 +25,14 @@ make_home_dir() { # {{{
     local new_home="$2"
 
     [ -d "$old_home" ] || {
-        mkdir --parents "$CARGO_HOME"
+        mkdir --parents "$new_home"
         return 0
     }
     [ -d "$new_home" ] || {
         >&2 echo "Found both '$old_home' and '$new_home'. Please delete one of them."
         exit 1
     }
-    mv "$HOME/.cargo" "$CARGO_HOME"
+    mv "$old_home" "$new_home"
 } # }}}
 
 make_home_dir "$HOME/.cargo"  "$CARGO_HOME"
