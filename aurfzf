@@ -2,17 +2,49 @@
 # vim: foldmethod=marker foldlevel=0
 
 
+# Usage Message {{{
+
+USAGE="
+SYNOPSYS
+    ${0##*/} [options] [package-descriptor-pattern]
+
+DESCRIPTION
+    Search interactively for packages from the AUR and the official
+    repositories interactively with fzf
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits
+
+    -c, --clean-cache
+        Delete all cached files and exit
+
+    -m --mode
+        Specifies where to look for packages. May be 'auronly', 'repoonly' or
+        'both' (defaults to 'both')
+
+NOTE
+    If the search terms for your package conflict with those of the flags, put
+    them after a double dash (--), like this:
+        ${0##*/} -- -h
+    This will search for packages with '-h' in their name or description
+    instead of activating the '-h' switch.
+"
+
+# }}}
+
+fatal() {
+    >&2 echo "$@"
+    exit 1
+}
+
+g_opt_mode=""
 aurfzf_cache_dir="${XDG_CACHE_DIR:-$HOME/.cache}/aurfzf"
-mkdir -p "$aurfzf_cache_dir/core"
-mkdir -p "$aurfzf_cache_dir/extra"
-mkdir -p "$aurfzf_cache_dir/community"
-mkdir -p "$aurfzf_cache_dir/multilib"
-mkdir -p "$aurfzf_cache_dir/aur"
 
 yay_install_opts="\
     --sudoloop --removemake --norebuild \
     --answerclean None --answerdiff None --answeredit None --answerupgrade None"
-yay_get_packages_cmd='yay --color=always --singlelineresults -Ss'
+yay_get_packages_cmd='yay --color=always --singlelineresults $g_opt_mode -Ss --'
 yay_fmt_lines='tr "\n" "\0" | sed -z "s|\t|\n    |"'
  
 
@@ -35,22 +67,39 @@ add_keybinding \
     "search packages"
 add_keybinding \
     'ctrl-i' \
-    "become(echo {1} | xargs -d '\n' -r yay $yay_install_opts -S)" \
+    "become(echo {1} | xargs -d '\n' -r yay $yay_install_opts -S --)" \
     "install selected packages"
 add_keybinding \
     'ctrl-f' \
-    "preview(yay --color=always -Si {1} | tee $aurfzf_cache_dir/{1})" \
+    "preview(yay --color=always -Si -- {1} | tee $aurfzf_cache_dir/{1})" \
     "force refetch preview"
 
 fzf_keybindings="${fzf_keybindings}esc:cancel"
 # }}}
 
-fzf_preview_cmd="\
-    cat $aurfzf_cache_dir/{1} 2>/dev/null \
-    || { yay --color=always -Si {1} | tee $aurfzf_cache_dir/{1}; }"
+fzf_default_cmd="echo -n" # If no package is given, start with an empty slate
 fzf_preview_window="right,60%,border-left"
 fzf_preview_window="$fzf_preview_window,<100(up,50%,border-bottom)"
-fzf_default_cmd="echo -n" # If no package is given, start with an empty slate
+fzf_preview_cmd="
+    secs_since_cached=\$(stat --format=%Y $aurfzf_cache_dir/{1} 2>/dev/null)
+    if [ \$? -ne 0 ]; then
+	# If the item is not cached, call yay and tee its output into cache
+        yay --color=always -Si -- {1} | tee $aurfzf_cache_dir/{1}
+    elif [ \$(date +%s) -ge \$(expr \$secs_since_cached + 3600) ]; then
+	# If there is a cache but it's too old, call yay and recache
+        yay --color=always -Si -- {1} | tee $aurfzf_cache_dir/{1}
+    else
+	cat $aurfzf_cache_dir/{1}
+    fi"
+
+
+mk_cache_dirs() {
+    mkdir -p "$aurfzf_cache_dir/core"
+    mkdir -p "$aurfzf_cache_dir/extra"
+    mkdir -p "$aurfzf_cache_dir/community"
+    mkdir -p "$aurfzf_cache_dir/multilib"
+    mkdir -p "$aurfzf_cache_dir/aur"
+}
 
 
 fzf_search_or_default() {
@@ -60,6 +109,36 @@ fzf_search_or_default() {
 
 
 main() {
+    # getopt argument parsing {{{
+    args="$(getopt -o "hcm:" -l "help,clean-cache,mode:" -n "$0" -- "$@")" \
+        || fatal "Error parsing arguments!"
+    eval set -- "$args"
+    
+    while true; do
+        case "$1" in
+            '--') shift; break ;;
+            '-h'|'--help') >&2 echo "$USAGE"; exit 0 ;;
+            '-c'|'--clean-cache')
+                rm -r "$aurfzf_cache_dir" \
+                    || fatal "Could not delete cache file. Exiting."
+                >&2 echo "Deleted $aurfzf_cache_dir"
+                exit 0
+                ;;
+            '-m'|'--mode')
+                shift
+                case "$1" in
+                    a|auronly)  g_opt_mode="--aur"  ;;
+                    r|repoonly) g_opt_mode="--repo" ;;
+                    b|both)     ;;
+                    *) fatal "Bad value for --mode switch. Try reading $0 --help" ;;
+                esac
+                shift
+                ;;
+        esac
+    done
+    # }}}
+
+    mk_cache_dirs
     fzf_search_or_default "$@" | fzf \
         --ignore-case --exact --multi --ansi \
         --info=inline \
@@ -68,10 +147,8 @@ main() {
         --bind="$fzf_keybindings" \
         --preview="$fzf_preview_cmd" \
         --preview-window="$fzf_preview_window" \
-        --read0
+        --read0 \
+        --with-shell="/bin/sh -c"
 }
 
-
 main "$@"
-rm -r "$aurfzf_cache_dir"
-
