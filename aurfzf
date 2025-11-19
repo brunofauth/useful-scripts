@@ -12,8 +12,9 @@ mkdir -p "$aurfzf_cache_dir/aur"
 yay_install_opts="\
     --sudoloop --removemake --norebuild \
     --answerclean None --answerdiff None --answeredit None --answerupgrade None"
-yay_get_packages_cmd='yay --color=always -Ss'
-yay_fmt_lines='xargs -d "\n" printf "%s\n%s\0"'
+yay_get_packages_cmd='yay --color=always --singlelineresults -Ss'
+yay_fmt_lines='tr "\n" "\0" | sed -z "s|\t|\n    |"'
+ 
 
 # Keybindings {{{
 fzf_keybindings=""
@@ -60,8 +61,7 @@ fzf_search_or_default() {
 
 main() {
     fzf_search_or_default "$@" | fzf \
-        -i --multi \
-        --ansi \
+        --ignore-case --exact --multi --ansi \
         --info=inline \
         --header="$fzf_header" \
         --header-first \
