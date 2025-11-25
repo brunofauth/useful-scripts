@@ -1,6 +1,12 @@
 #! /bin/sh
 # vim: foldmethod=marker foldlevel=0
 
+>&2 echo "This script ($0) is DEPRECATED. Use 'isd' instead"
+if ! isd_path="$(which isd 2>/dev/null)"; then
+    >&2 echo "    \$ sudo pacman -S isd"
+    >&2 echo "    \$ pipx install isd"
+fi
+
 
 # Usage Message {{{
 USAGE="
