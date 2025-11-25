@@ -4,10 +4,11 @@
 # This is irrelevant because even Dash implements 'local'
 # shellcheck disable=SC3043
 
-
 readonly DOTS_CFG_ROOT="${DOTFILES:-$HOME/dots}/general/.config"
 readonly HOME_CFG_ROOT="${XDG_CONFIG_HOME:-$HOME/.config}"
 readonly CR="$(printf '\r')"
+
+export GIT_WORK_TREE="$DOTS_CFG_ROOT"
 
 
 # (msg: str, valid_chars: str, default_val: str)
@@ -119,9 +120,10 @@ sync_dir() {
             y*) "${PAGER:-less}" "${src:?}/$only_in_src";;
             *) ;;
         esac
-        case "$(prompt_choice "Copy/Ignore" "cpi" "i")" in
+        case "$(prompt_choice "Copy/Ignore/Remove" "cir" "i")" in
             c*) cp "${src:?}/$only_in_src" "$dst" ;;
             i*) ;;
+            r*) git rm "${src:?}/$only_in_src" ;;
             *) >&2 echo "Got invalid response" ;;
         esac
         printf '\n'
