@@ -1,0 +1,38 @@
+#! /bin/sh
+
+
+_mount_root=""
+
+
+main() {
+    if [ -z "$XDG_RUNTIME_DIR" ]; then
+        >&2 echo '$XDG_RUNTIME_DIR not set. Exiting.'
+        exit 1
+    fi
+
+    if ! mkdir -p "$XDG_RUNTIME_DIR/ifuse-app"; then
+        >&2 echo 'Could not create $XDG_RUNTIME_DIR/ifuse-app'
+        exit 1
+    fi
+
+    if ! tmp_mnt_dir="$(mktemp --tmpdir="$XDG_RUNTIME_DIR/ifuse-app" mnt-point_XXXXXX)"; then
+        >&2 echo "could not create mount point (tmpdir) for mobile device"
+        exit 1
+    fi
+
+    local apps_list
+    if ! apps_list="$(ifuse --list-apps)"; then
+        >&2 echo "Failed to run ifuse"
+        exit 1
+    fi
+       
+    echo "$apps_list" \
+        | fzf -e -i \
+            --delimiter=, \
+            --with-nth=3  \
+            --accept-nth=1 \
+        | xargs -rI {} \
+            printf 'ifuse --documents %s %s\n' {} "$tmp_mnt_dir"
+}
+
+main "$@"
