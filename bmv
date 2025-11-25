@@ -44,46 +44,44 @@ fatal() {
 }
 
 
-DO_CMD="mv"
-DO_LOG=0
-DO_DOT=0
-DO_SORT_BY_TIME=0
+g_opt_cmd="mv"
+g_opt_log=0
+g_opt_dotfiles=0
+g_opt_sort_by_time=0
+g_opt_dirs_first=0
 
 
 # getopt argument parsing {{{
-args="$(getopt -o "hcldtD" -l "help,copy,log,dotfiles,time,dirs-first" -n "bmv" -- "$@")" \
+args="$(getopt -o "hcldtD" -l "help,copy,log,dotfiles,time,dirs-first" -n "${0##*/}" -- "$@")" \
     || fatal "Error parsing arguments!"
 eval set -- "$args"
 
 while true; do
     case "$1" in
-        '-h'|'--help')
+        --) shift; break ;;
+        -h|--help)
             >&2 echo "$USAGE"
             exit 0
             ;;
-        '-c'|'--copy')
-            DO_CMD="cp"
+        -c|--copy)
+            g_opt_cmd="cp"
             shift
             ;;
-        '-l'|'--log')
-            DO_LOG=1
+        -l|--log)
+            g_opt_log=1
             shift
             ;;
-        '-d'|'--dotfiles')
-            DO_DOT=1
+        -d|--dotfiles)
+            g_opt_dotfiles=1
             shift
             ;;
-        '-t'|'--time')
-            DO_SORT_BY_TIME=1
+        -t|--time)
+            g_opt_sort_by_time=1
             shift
             ;;
-        '-D'|'--dirs-first')
-            DO_DIRS_FIRST=1
+        -D|--dirs-first)
+            g_opt_dirs_first=1
             shift
-            ;;
-        '--')
-            shift
-            break
             ;;
     esac
 done
@@ -92,9 +90,9 @@ done
 
 src_files="$(mktemp bmv-src.XXXXXXXXXX --tmpdir)"
 ls_flags=""
-[ "$DO_DOT" = 1 ] && ls_flags="$ls_flags --all"
-[ "$DO_SORT_BY_TIME" = 1 ] && ls_flags="$ls_flags -t"
-[ "$DO_DIRS_FIRST" = 1 ] && ls_flags="$ls_flags --group-directories-first"
+[ "$g_opt_dotfiles" = 1 ]     && ls_flags="$ls_flags --all"
+[ "$g_opt_sort_by_time" = 1 ] && ls_flags="$ls_flags -t"
+[ "$g_opt_dirs_first" = 1 ]   && ls_flags="$ls_flags --group-directories-first"
 
 
 # Read names from stdin, each one a line, if anything is piped
@@ -126,7 +124,7 @@ cmd_list="$(mktemp bmv-cmd.XXXXXXXXXX --tmpdir)"
 echo "# The following commands will be executed" >> "$cmd_list"
 
 parallel --keep-order --link --trim lr \
-        echo "$DO_CMD" -vi '{= if ($arg[1] ne $arg[2]) {$_=Q($_)} else {skip} =}' \
+        echo "$g_opt_cmd" -vi '{= if ($arg[1] ne $arg[2]) {$_=Q($_)} else {skip} =}' \
         :::: "$src_files" "$dst_files" \
     >> "$cmd_list"
 
@@ -136,7 +134,7 @@ rm "$src_files" "$dst_files"
 </dev/tty "${EDITOR:-vim}" "$cmd_list"
 sed -Ei '/^[[:space:]]*#/d' "$cmd_list"
 
-if [ "$DO_LOG" = "1" ]; then
+if [ "$g_opt_log" = "1" ]; then
    cp "$cmd_list" bmv.log
    echo "Logged 'cmd_list' to 'bmv.log'"
 fi

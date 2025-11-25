@@ -1,0 +1,58 @@
+#! /usr/bin/env python
+
+from __future__ import annotations
+import datetime as dt
+import os
+import sys
+
+
+# From `man 3 strptime`:
+# "In case a text string is to be matched, the comparison is case insensitive."
+# Thus: both `2h` and `2H` will match `%Hh`
+_STRPTIME_PATTERNS = [
+    "%Hh%Mm%Ss",
+    "%Hh%Ss%Mm",
+    "%Ss%Hh%Mm",
+    "%Ss%Mm%Hh",
+    "%Mm%Ss%Hh",
+    "%Mm%Hh%Ss",
+    "%Hh%Mm",
+    "%Hh%Ss",
+    "%Mm%Ss",
+    "%Mm%Hh",
+    "%Ss%Hh",
+    "%Ss%Mm",
+    "%Hh",
+    "%Mm",
+    "%Ss",
+]
+
+
+def parse_time(raw_time: str) -> dt.datetime:
+    time_str = raw_time.replace(' ', '').lower()
+    for pattern in _STRPTIME_PATTERNS:
+        try:
+            return dt.datetime.strptime(time_str, pattern)
+        except ValueError:
+            continue
+    raise ValueError(f'No valid strptime pattern matches the given string: {time_str}')
+
+
+def _main_impl() -> int:
+    if len(sys.argv) == 1:
+        print("Provide at least one time specifier, in any order (e.g.: 2m 3h 25s)", file=sys.stderr)
+        return 1
+    try:
+        delta = parse_time(''.join(sys.argv[1:])) - dt.datetime.strptime('', '')
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        return 1
+    os.execlp('shalarm', 'shalarm', (dt.datetime.now() + delta).strftime("%H:%M:%S"))
+
+
+def main() -> None:
+    raise SystemExit(_main_impl())
+
+
+if __name__ == "__main__":
+    main()

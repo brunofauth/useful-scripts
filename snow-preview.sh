@@ -21,7 +21,7 @@ case "$file_type" in
     application/x-shellscript) $cmd_bat "$1";;
     application/x-perl)        $cmd_bat "$1";;
     application/json)          $cmd_bat "$1";;
-    application/pdf) pdfinfo "$1" || pdftotext "$1" - ;;
+    application/pdf) pdfinfo "$1" 2>/dev/null || pdftotext "$1" - ;;
     application/zip) zipinfo "$1" ;;
     image/*) iinfo "$1" ;;
     video/*) ffprobe -hide_banner "$1" ;;

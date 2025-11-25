@@ -23,14 +23,19 @@ OPTIONS
 
     -w, --wait=SECONDS
         Time to sleep between retrievals
+
+    -p, --parents
+        Ascend the URL resource hierarchy when copying
 "
 
 # }}}
 
 # getopt argument parsing {{{
-args="$(getopt -o "hu:d:" -l "help,user-agent:,directory:" -n "cpws" -- "$@")" \
+args="$(getopt -o "hu:d:w:p" -l "help,user-agent:,directory:,wait:,parents" -n "cpws" -- "$@")" \
     || { >&2 echo "Error parsing arguments!"; exit 1; }
 eval set -- "$args"
+
+arg_parents="--no-parent"
 
 while true; do
     case "$1" in
@@ -52,6 +57,10 @@ while true; do
             shift
             arg_wait="$1"
             shift
+            ;;
+        -p|--parents)
+            shift
+            arg_parents=""
             ;;
         --)
             shift
@@ -89,7 +98,7 @@ exec wget \
     --no-verbose --progress=bar --show-progress \
     --directory-prefix="$arg_directory" \
     --user-agent="$arg_user_agent" \
-    --wait="$arg_wait" --random-wait \
+    --wait="$arg_wait" --random-wait "$arg_parents" \
     --recursive --level=inf --convert-links --page-requisites --domains="$target_domain" \
     "$target_url"
 
