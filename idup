@@ -165,7 +165,7 @@ sync_dir() {
         esac
         case "$(prompt_choice "Restore from SRC/Update SRC/Ignore" "rui" "i")" in
             r*) cp "$src/$common_file" "$dst";;
-            u*) cp "$dst/$common_file" "$src"; >&2 git add "$src/$only_in_dst" ;;
+            u*) cp "$dst/$common_file" "$src"; >&2 git add "$src/$common_file" ;;
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
