@@ -123,7 +123,7 @@ sync_dir() {
         case "$(prompt_choice "Copy/Ignore/Remove" "cir" "i")" in
             c*) cp "${src:?}/$only_in_src" "$dst" ;;
             i*) ;;
-            r*) git rm "${src:?}/$only_in_src" ;;
+            r*) >&2 git rm "${src:?}/$only_in_src" ;;
             *) >&2 echo "Got invalid response" ;;
         esac
         printf '\n'
@@ -136,8 +136,8 @@ sync_dir() {
             *) ;;
         esac
         case "$(prompt_choice "Copy/Delete/Ignore" "cdi" "i")" in
-            c*) cp "${dst:?}/$only_in_dst" "$src" ;;
-            d*) rm "${dst:?}/$only_in_dst";;
+            c*) cp "$dst/$only_in_dst" "$src"; >&2 git add "$src/$only_in_dst" ;;
+            d*) rm "$dst/$only_in_dst";;
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
@@ -165,7 +165,7 @@ sync_dir() {
         esac
         case "$(prompt_choice "Restore from SRC/Update SRC/Ignore" "rui" "i")" in
             r*) cp "$src/$common_file" "$dst";;
-            u*) cp "$dst/$common_file" "$src";;
+            u*) cp "$dst/$common_file" "$src"; >&2 git add "$src/$only_in_dst" ;;
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
@@ -203,6 +203,7 @@ main_fzf() {
 
     local dirs_to_sync="$(comm -12 "$f_src_dirs" "$f_dst_dirs" | fzf -i -m)"
     rm "$f_src_dirs" "$f_dst_dirs"
+    cd "$DOTS_CFG_ROOT" || exit 1
 
     local IFS='
 '

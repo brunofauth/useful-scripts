@@ -25,7 +25,7 @@ music_dir="${XDG_MUSIC_DIR:-$HOME/song}"
 [ -d "$music_dir" ] || mkdir -p "$music_dir"
 
 <"$song_list" xargs -rI {} -P5 \
-    spotdl --output "$music_dir" --format=m4a -- "{}"
+    spotdl --output "$music_dir" --format=mp3 -- "{}"
 ret_code=$?
 
 rm "$song_list"
