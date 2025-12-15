@@ -53,11 +53,11 @@ mkdir -p "$cargo_cache"
 mv_and_ln "$CARGO_HOME/registry" "$cargo_cache/registry"
 mv_and_ln "$CARGO_HOME/git" "$cargo_cache/git"
 
-cargo_config="$XDG_CONFIG_HOME/cargo"
-mkdir -p "$cargo_config"
+cargo_config_dir="$XDG_CONFIG_HOME/cargo"
+mkdir -p "$cargo_config_dir"
 [ -f "$CARGO_HOME/config.toml" ] && ! [ -L "$CARGO_HOME/config.toml" ] \
-    && mv "$CARGO_HOME/config.toml" "$cargo_config"
-ln -fsT "$cargo_config/config.toml" "$CARGO_HOME/config.toml"
+    && mv "$CARGO_HOME/config.toml" "$cargo_config_dir"
+ln -fsT "$cargo_config_dir/config.toml" "$CARGO_HOME/config.toml"
 
 
 rustup_cache="$XDG_CACHE_HOME/rustup"
