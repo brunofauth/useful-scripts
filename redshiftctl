@@ -1,0 +1,85 @@
+#! /usr/bin/env python3
+
+import argparse as ap
+import datetime as dt
+import os
+import subprocess as sp
+import sys
+
+from enum import StrEnum, auto as enum_auto
+from pathlib import Path
+from typing import TYPE_CHECKING, assert_never
+
+if TYPE_CHECKING:
+    from typing import Final
+
+
+STATEFILE_PATH: Final[Path] = Path(os.environ["XDG_RUNTIME_DIR"]) / "redshift-temperature"
+DEFAULT_TEMPERATURE_NIGHTTIME: Final[int] = 2500
+DEFAULT_TEMPERATURE_DAYTIME: Final[int] = 6500
+
+
+class CliCommands(StrEnum):
+    CLEAR = enum_auto()
+    RESET = enum_auto()
+    PRINT = enum_auto()
+    INCREASE = enum_auto()
+    DECREASE = enum_auto()
+
+
+def _is_nighttime(t: dt.time) -> bool:
+    return t < dt.time(hour=7) or t >= dt.time(hour=17)
+
+
+def init_statefile() -> int:
+    temperature = DEFAULT_TEMPERATURE_NIGHTTIME \
+        if _is_nighttime(dt.datetime.now().time()) else DEFAULT_TEMPERATURE_DAYTIME
+    STATEFILE_PATH.write_text(str(temperature))
+    return temperature
+
+
+def get_current_temperature() -> int:
+    try:
+        return int(STATEFILE_PATH.read_text())
+    except OSError:
+        return init_statefile()
+    except ValueError:
+        print("Expected to find an integer inside statefile {STATEFILE_PATH}", file=sys.stderr)
+        raise
+
+
+def set_current_temperature(value: int) -> None:
+    sp.run(["redshift", "-PO", str(value)], check=True)
+    STATEFILE_PATH.write_text(str(value))
+
+
+def main() -> int:
+    parser = ap.ArgumentParser()
+    parser.add_argument("command", choices=list(cmd.value for cmd in CliCommands))
+    parser.add_argument("--ammount", type=int, help="for use with increase/decrease", default=0)
+    args = parser.parse_args()
+
+    match CliCommands(args.command):
+        case CliCommands.CLEAR.value:
+            print("CLEAR")
+            STATEFILE_PATH.unlink(missing_ok=False)
+            sp.run(["redshift", "-x"], check=True)
+        case CliCommands.RESET:
+            temperature = init_statefile()
+            sp.run(["redshift", "-PO", str(temperature)], check=True)
+        case CliCommands.PRINT:
+            print(get_current_temperature())
+        case CliCommands.INCREASE:
+            temperature = get_current_temperature() + args.ammount
+            set_current_temperature(temperature)
+        case CliCommands.DECREASE:
+            temperature = get_current_temperature() - args.ammount
+            set_current_temperature(temperature)
+        case _ as unreachable:
+            assert_never(unreachable)
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
