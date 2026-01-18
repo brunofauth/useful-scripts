@@ -177,6 +177,7 @@ sync_dir() {
 
 
 main_cli() {
+    cd "$DOTS_CFG_ROOT" || exit 1
     for dir_to_sync; do
         local src="$DOTS_CFG_ROOT/$dir_to_sync"
         local dst="$HOME_CFG_ROOT/$dir_to_sync"

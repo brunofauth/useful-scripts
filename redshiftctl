@@ -131,7 +131,8 @@ def main() -> int:
             sp.run(["redshift", '-b', f'{b}:{b}', "-PO", str(t)], check=True)
 
         case CliCommands.PRINT:
-            print(get_current_temperature())
+            t = tempvar.get(parse_temperature)
+            print(t)
 
         case CliCommands.UPDATE:
             t = tempvar.get(parse_temperature) + args.temperature_delta
