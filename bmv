@@ -1,9 +1,10 @@
 #! /bin/sh
 # vim: foldmethod=marker foldlevel=0
+# shellcheck disable=SC3043
 
 
-# Usage Message {{{
-
+# Usage Message
+# {{{
 USAGE="
 SYNOPSYS
     ${0##*/} [options] [files...]
@@ -16,9 +17,6 @@ OPTIONS
     -h, --help
         Displays this usage information and exits
 
-    -c, --copy
-        Copies files, instead of moving them
-
     -d --dotfiles
         Do not ignore files prefixed with a '.'
 
@@ -27,118 +25,144 @@ OPTIONS
 
     -D --dirs-first
         Show directories before file entries
-
+    
+    -m, --mode <MODE>
+        Mode of operation. May be 'mv' or 'cp'. Defaults to 'mv'.
+    
 NOTE
     If the names of your files conflict with those of the flags, put them
     after a double dash (--), like this:
-        ${0##*/} -- --copy
-    This will rename a file called '--copy', instead of activating the
-    '--copy' switch.
+        ${0##*/} -- --time
+    This will rename a file called '--time', instead of activating the
+    '--time' switch.
 "
-
 # }}}
+
+
+# Global variables are g_* prefixed
+g_opt_mode="mv"
+g_opt_log=0
+g_ls_flags=""
+g_pos_args=
+
 
 fatal() {
+    # {{{
     >&2 echo "$@"
     exit 1
-}
+} # }}}
 
 
-g_opt_cmd="mv"
-g_opt_log=0
-g_opt_dotfiles=0
-g_opt_sort_by_time=0
-g_opt_dirs_first=0
+escape_quotes() {
+    # {{{
+    printf "'%s'" "$(printf '%s' "$1" | sed "s|'|'\\\\''|g")"
+} # }}}
 
 
-# getopt argument parsing {{{
-args="$(getopt -o "hcldtD" -l "help,copy,log,dotfiles,time,dirs-first" -n "${0##*/}" -- "$@")" \
-    || fatal "Error parsing arguments!"
-eval set -- "$args"
+parse_cli_args() {
+    # {{{
+    # NOTE: functions like this CAN NOT be called inside subshells $(myfunc)
+    # because they will modify variables that, upon return, will STAY on those
+    # subshells and, thus, the globals defined in the calling instance WILL NOT
+    # be modified (and that's a bug).
 
-while true; do
-    case "$1" in
-        --) shift; break ;;
-        -h|--help)
-            >&2 echo "$USAGE"
-            exit 0
-            ;;
-        -c|--copy)
-            g_opt_cmd="cp"
-            shift
-            ;;
-        -l|--log)
-            g_opt_log=1
-            shift
-            ;;
-        -d|--dotfiles)
-            g_opt_dotfiles=1
-            shift
-            ;;
-        -t|--time)
-            g_opt_sort_by_time=1
-            shift
-            ;;
-        -D|--dirs-first)
-            g_opt_dirs_first=1
-            shift
-            ;;
-    esac
-done
-# }}}
+    args="$(getopt -o "hm:ldtD" -l "help,mode:,log,dotfiles,time,dirs-first" -n "${0##*/}" -- "$@")" \
+        || fatal "Error parsing arguments!"
+    eval set -- "$args"
+
+    while true; do
+        case "$1" in
+            --) shift; break ;;
+            -h|--help)
+                >&2 echo "$USAGE"
+                exit 0
+                ;;
+            -l|--log)
+                g_opt_log=1
+                shift
+                ;;
+            -d|--dotfiles)
+                g_ls_flags="$g_ls_flags --all"
+                shift
+                ;;
+            -t|--time)
+                g_ls_flags="$g_ls_flags -t"
+                shift
+                ;;
+            -D|--dirs-first)
+                g_ls_flags="$g_ls_flags --group-directories-first"
+                shift
+                ;;
+            -m|--mode)
+                shift
+                case "$1" in
+                    cp|mv) g_opt_mode="$1" ;;
+                    *) fatal "Invalid mode '$(escape_quotes "$1")'" ;;
+                esac
+                shift
+		;;
+        esac
+    done
+    g_pos_args="$@" # Return remaining (positional) arguments
+} # }}}
 
 
-src_files="$(mktemp bmv-src.XXXXXXXXXX --tmpdir)"
-ls_flags=""
-[ "$g_opt_dotfiles" = 1 ]     && ls_flags="$ls_flags --all"
-[ "$g_opt_sort_by_time" = 1 ] && ls_flags="$ls_flags -t"
-[ "$g_opt_dirs_first" = 1 ]   && ls_flags="$ls_flags --group-directories-first"
+main() {
+    # {{{
 
+    parse_cli_args "$@"
+    eval set -- "$g_pos_args"
 
-# Read names from stdin, each one a line, if anything is piped
-if ! [ -t 0 ]; then
-    cat >> "$src_files"
-else
-    if [ $# -eq 0 ]; then
-        # Maybe this 'ls' should be 'find'
-        # shellcheck disable=SC2086
-        ls $ls_flags >> "$src_files"
+    src_files="$(mktemp bmv-src.XXXXXXXXXX --tmpdir)"
+
+    # Read names from stdin, each one a line, if anything is piped
+    if ! [ -t 0 ]; then
+        cat >> "$src_files"
     else
-        printf "%s\n" "$@" >> "$src_files"
+        if [ $# -eq 0 ]; then
+            # Maybe this 'ls' should be 'find'
+            # shellcheck disable=SC2086
+            ls $g_ls_flags >> "$src_files"
+        else
+            printf "%s\n" "$@" >> "$src_files"
+        fi
     fi
-fi
+
+    dst_files="$(mktemp bmv-dst.XXXXXXXXXX --tmpdir)"
+    echo "# Rename your files, save and quit" >> "$dst_files"
+    cat "$src_files" >> "$dst_files"
+
+    </dev/tty "${EDITOR:-vim}" "$dst_files"
+    sed -Ei '/^[[:space:]]*#/d' "$dst_files"
+
+    [ "$(wc -l < "$src_files")" -ne "$(wc -l < "$dst_files")" ] \
+        && fatal "Unmatching ammount of names. Exiting."
 
 
-dst_files="$(mktemp bmv-dst.XXXXXXXXXX --tmpdir)"
-echo "# Rename your files, save and quit" >> "$dst_files"
-cat "$src_files" >> "$dst_files"
+    cmd_list="$(mktemp bmv-cmd.XXXXXXXXXX --tmpdir)"
+    echo "# The following commands will be executed" >> "$cmd_list"
 
-</dev/tty "${EDITOR:-vim}" "$dst_files"
-sed -Ei '/^[[:space:]]*#/d' "$dst_files"
+    while read -ru 3 src_filename && read -ru 4 dst_filename; do
+        [ "$src_filename" = "$dst_filename" ] && continue
+        printf '%s -vi %s %s\n' "$g_opt_mode" "$(escape_quotes "$src_filename")" "$(escape_quotes "$dst_filename")" >> "$cmd_list"
+    done 3<"$src_files" 4<"$dst_files"
 
-[ "$(wc -l < "$src_files")" -ne "$(wc -l < "$dst_files")" ] \
-    && fatal "Unmatching ammount of names. Exiting."
+    rm "$src_files" "$dst_files"
+    [ "$(wc -l < "$cmd_list")" -lt 2 ] && fatal "No name changed. Exiting."
+
+    </dev/tty "${EDITOR:-vim}" "$cmd_list"
+    sed -Ei '/^[[:space:]]*#/d' "$cmd_list"
+
+    if [ "$g_opt_log" = "1" ]; then
+       cp "$cmd_list" bmv.log
+       echo "Logged 'cmd_list' to 'bmv.log'"
+    fi
+
+    . "$cmd_list"
+    rm "$cmd_list"
+
+} # }}}
 
 
-cmd_list="$(mktemp bmv-cmd.XXXXXXXXXX --tmpdir)"
-echo "# The following commands will be executed" >> "$cmd_list"
-
-parallel --keep-order --link --trim lr \
-        echo "$g_opt_cmd" -vi '{= if ($arg[1] ne $arg[2]) {$_=Q($_)} else {skip} =}' \
-        :::: "$src_files" "$dst_files" \
-    >> "$cmd_list"
-
-rm "$src_files" "$dst_files"
-[ "$(wc -l < "$cmd_list")" -lt 2 ] && fatal "No name changed. Exiting."
-
-</dev/tty "${EDITOR:-vim}" "$cmd_list"
-sed -Ei '/^[[:space:]]*#/d' "$cmd_list"
-
-if [ "$g_opt_log" = "1" ]; then
-   cp "$cmd_list" bmv.log
-   echo "Logged 'cmd_list' to 'bmv.log'"
-fi
-
-. "$cmd_list"
-rm "$cmd_list"
+main "$@"
 
