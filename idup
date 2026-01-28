@@ -4,7 +4,7 @@
 # This is irrelevant because even Dash implements 'local'
 # shellcheck disable=SC3043
 
-readonly DOTS_CFG_ROOT="${DOTFILES:-$HOME/dots}/general/.config"
+readonly DOTS_CFG_ROOT="${DOTFILES:-$HOME/dots}/home/.config"
 readonly HOME_CFG_ROOT="${XDG_CONFIG_HOME:-$HOME/.config}"
 readonly CR="$(printf '\r')"
 
