@@ -25,21 +25,19 @@ NOTE
 # }}}
 
 
-fatal() { # {{{
-    >&2 echo "$@"
-    exit 1
-} # }}}
+# Constants are UPPERCASE
+readonly PREVIEW_SCRIPT="${SCRIPTS:-$HOME/scripts}/snow-preview.sh" 
+readonly BAT_PAGER="bat --paging=always --style=plain"
 
-
-PREVIEW_SCRIPT="${SCRIPTS:-$HOME/scripts}/snow-preview.sh" 
-BAT_PAGER="bat --paging=always --style=plain"
-
-FZF_HEADER="\
+readonly FZF_HEADER="\
 Files from: ${*:-"$(pwd)"}
 (Shift-)Tab to (de)select
 Ctrl + ( [V]im  [L]ess  [O]pen  [P]rint  [Y]ank  [W]rap  [R]otate )"
 
-fzf_bind_commands="\
+
+# Global (mutable) variables are g_* prefixed
+g_pos_args=
+g_fzf_bind_commands="\
 ctrl-v:become(${EDITOR:-vim} -p {+}),\
 ctrl-l:execute(echo {+} | xargs printf '%s\0' | xargs -0I [file] sh -c '$PREVIEW_SCRIPT [file] | $BAT_PAGER')+clear-selection,\
 ctrl-o:become(echo {+} | xargs --max-args=1 detach xdg-open),\
@@ -50,24 +48,55 @@ esc:cancel,\
 enter:ignore" 
 
 
-# Preview window settings and bindings (rotation) {{{
-key_rotate=ctrl-r
-wide_preview=right,70%
-tall_preview=top,60%
-_col_count="$(stty -a | grep -Po '(?<=columns )\d+')"
-if [ "$_col_count" -ge 160 ]; then
-    fzf_preview_window=$wide_preview
-    fzf_bind_commands="$fzf_bind_commands,$key_rotate:change-preview-window($tall_preview|$wide_preview)"
-else
-    fzf_preview_window=$tall_preview
-    fzf_bind_commands="$fzf_bind_commands,$key_rotate:change-preview-window($wide_preview|$tall_preview)"
-fi
-# }}}
+fatal() {
+    # {{{
+    >&2 echo "$@"
+    exit 1
+} # }}}
 
 
-main() {
+init_preview_window() {
+    # Preview window settings and bindings (rotation) {{{
+    key_rotate=ctrl-r
+    wide_preview=right,70%
+    tall_preview=top,60%
+    _col_count="$(stty -a | grep -Po '(?<=columns )\d+')"
+    if [ "$_col_count" -ge 160 ]; then
+        fzf_preview_window=$wide_preview
+        g_fzf_bind_commands="$g_fzf_bind_commands,$key_rotate:change-preview-window($tall_preview|$wide_preview)"
+    else
+        fzf_preview_window=$tall_preview
+        g_fzf_bind_commands="$g_fzf_bind_commands,$key_rotate:change-preview-window($wide_preview|$tall_preview)"
+    fi
+} # }}}
 
-    # getopt argument parsing {{{
+
+find_files() {
+    # {{{
+    if   command -v rg   >/dev/null 2>&1; then
+        rg --files --null "$@"
+
+    elif command -v find >/dev/null 2>&1; then
+        find "$@" \
+             \( -iname .git \
+            -or -iname .svn \
+            -or -iname .cvs \
+            -or -iname .hg  \
+            -or -iname node_modules \
+        \) -prune -o -print0
+
+    else
+        >&2 echo "couldn't find_files() because you got no programs in your system."
+    fi
+} # }}}
+
+
+parse_cli_args() {
+    # {{{
+    # NOTE: functions like this CAN NOT be called inside subshells $(myfunc)
+    # because they will modify variables that, upon return, will STAY on those
+    # subshells and, thus, the globals defined in the calling instance WILL NOT
+    # be modified (and that's a bug).
     args="$(getopt -o "h" -l "help" -n "snow" -- "$@")" \
         || fatal "Error parsing arguments!"
     eval set -- "$args"
@@ -78,9 +107,18 @@ main() {
             '--') shift; break ;;
         esac
     done
-    # }}}
 
-    rg --files --null "$@" \
+    g_pos_args="$@" # Return remaining (positional) arguments
+} # }}}
+
+
+main() {
+
+    parse_cli_args "$@"
+    eval set -- "$g_pos_args"
+    init_preview_window
+
+    find_files "$@" \
         | sort -z \
         | fzf \
             -i --multi \
@@ -88,7 +126,7 @@ main() {
             --info=inline --header="$FZF_HEADER" --header-first \
             --preview="$PREVIEW_SCRIPT {}" \
             --preview-window="$fzf_preview_window" \
-            --bind="$fzf_bind_commands"
+            --bind="$g_fzf_bind_commands"
 }
 
 main "$@"
