@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse as ap
 import datetime as dt
 import os
+import shlex
 import subprocess as sp
 import sys
 
@@ -13,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, assert_never
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from typing import Final
 
 
@@ -27,12 +28,32 @@ DEFAULT_TEMPERATURE_DAYTIME: Final[int] = os.environ.get("RSCTL_TEMPERATURE_DAY"
 DEFAULT_BRIGHTNESS_NIGHTTIME: Final[float] = os.environ.get("RSCTL_BRIGHTNESS_NIGHT", 0.5)
 DEFAULT_BRIGHTNESS_DAYTIME: Final[float] = os.environ.get("RSCTL_BRIGHTNESS_DAY", 0.5)
 
+EPILOGUE = (
+    "When using this program, a redshift daemon should not be running in the "
+    "background because it will try and change parameters set by this script. "
+    "If weird behavior starts happening, try and disable redshift.service "
+    "and, instead, enable redshiftctl.service"
+)
+
 
 class CliCommands(StrEnum):
     CLEAR = enum_auto()
     RESET = enum_auto()
     PRINT = enum_auto()
     UPDATE = enum_auto()
+
+    def help(self) -> str:
+        match self:
+            case CliCommands.CLEAR:
+                return "Unset brightness and temperature values (act as if not running redshift)"
+            case CliCommands.RESET:
+                return "Set brightness and temperature to their default values"
+            case CliCommands.PRINT:
+                return "Show the current values for brightness and temperature, and exit"
+            case CliCommands.UPDATE:
+                return "Change the current values for brightness and temperature"
+            case _ as unreachable:
+                assert_never(unreachable)
 
 
 def _is_nighttime(t: dt.time) -> bool:
@@ -44,15 +65,19 @@ class StatefileVariable[T]:
         self,
         path: str | Path,
         default_cb: Callable[[], T] | None = None,
+        sanitize_cb: Callable[[T], T] | None = None,
     ) -> None:
         self._path = path
         self._default_cb = default_cb
+        self._sanitize_cb = sanitize_cb
 
     def get(self, parser: Callable[[str], T]) -> T:
         if hasattr(self, "_value"):
             return self._value
         try:
             self._value = parser(self._path.read_text())
+            if self._sanitize_cb is not None:
+                self._value = self._sanitize_cb(self._value)
             return self._value
         except OSError:
             if self._default_cb is None:
@@ -108,38 +133,55 @@ def set_current_temperature(value: int) -> None:
     TEMPERATURE_STATEFILE_PATH.write_text(str(value))
 
 
+def run_and_log_err(args: Sequence[str], verbose: bool = False) -> None:
+    if verbose:
+        print(shlex.join(args), file=sys.stderr)
+    try:
+        sp.run(args, check=True)
+    except sp.CalledProcessError as error:
+        print("==> Note:", error.stderr, sep="\n", file=sys.stderr)
+        raise
+
+
 def main() -> int:
-    parser = ap.ArgumentParser()
-    parser.add_argument("command", choices=list(cmd.value for cmd in CliCommands))
-    parser.add_argument("--temperature_delta", type=int, help="for use with 'update'", default=0)
-    parser.add_argument("--brightness_delta", type=float, help="for use with 'update'", default=0)
+    parser = ap.ArgumentParser(epilog=EPILOGUE)
+    parser.add_argument("-v", "--verbose", action="store_true", help="verbosity level", default=0)
+
+    subparser_maker = parser.add_subparsers(dest='subparser_name')
+    subparsers = {cmd: subparser_maker.add_parser(cmd.value, help=cmd.help()) for cmd in CliCommands}
+
+    subparsers[CliCommands.UPDATE].add_argument("-t", "--temperature_delta", type=int, default=0)
+    subparsers[CliCommands.UPDATE].add_argument("-b", "--brightness_delta", type=float, default=0)
+
     args = parser.parse_args()
 
     STATE_DIR.mkdir(exist_ok=True, parents=True)
     tempvar = StatefileVariable(TEMPERATURE_STATEFILE_PATH, default_cb=init_temperature)
-    brightvar = StatefileVariable(BRIGHTNESS_STATEFILE_PATH, default_cb=init_brightness)
+    brightvar = StatefileVariable(BRIGHTNESS_STATEFILE_PATH, default_cb=init_brightness, sanitize_cb=lambda v: round(min(v, 1), 2))
 
-    match CliCommands(args.command):
+    match CliCommands(args.subparser_name):
         case CliCommands.CLEAR.value:
             tempvar.clear()
             brightvar.clear()
-            sp.run(["redshift", "-x"], check=True)
+            run_and_log_err(["redshift", "-x"], verbose=args.verbose)
 
         case CliCommands.RESET:
             t = tempvar.get(parse_temperature)
             b = brightvar.get(parse_brightness)
-            sp.run(["redshift", '-b', f'{b}:{b}', "-PO", str(t)], check=True)
+            run_and_log_err(["redshift", '-b', f'{b}:{b}', "-PO", str(t)], verbose=args.verbose)
 
         case CliCommands.PRINT:
             t = tempvar.get(parse_temperature)
-            print(t)
+            print(f"temperature={t}")
+            b = brightvar.get(parse_brightness)
+            print(f"brightness={b}")
 
         case CliCommands.UPDATE:
             t = tempvar.get(parse_temperature) + args.temperature_delta
             tempvar.set(t)
-            b = brightvar.get(parse_brightness) + args.brightness_delta
+            b = round(brightvar.get(parse_brightness) + args.brightness_delta, 2)
             brightvar.set(b)
-            sp.run(["redshift", '-b', f'{b}:{b}', "-PO", str(t)], check=True)
+            run_and_log_err(["redshift", '-b', f'{b}:{b}', "-PO", str(t)], verbose=args.verbose)
 
         case _ as unreachable:
             assert_never(unreachable)
