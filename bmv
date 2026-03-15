@@ -3,6 +3,13 @@
 # shellcheck disable=SC3043
 
 
+# Global variables are g_* prefixed
+g_opt_mode="mv"
+g_opt_log=0
+g_ls_flags=""
+g_pos_args=
+
+
 # Usage Message
 # {{{
 USAGE="
@@ -27,7 +34,7 @@ OPTIONS
         Show directories before file entries
     
     -m, --mode <MODE>
-        Mode of operation. May be 'mv' or 'cp'. Defaults to 'mv'.
+        Mode of operation. May be 'mv' or 'cp'. Defaults to $g_opt_mode.
     
 NOTE
     If the names of your files conflict with those of the flags, put them
@@ -37,13 +44,6 @@ NOTE
     '--time' switch.
 "
 # }}}
-
-
-# Global variables are g_* prefixed
-g_opt_mode="mv"
-g_opt_log=0
-g_ls_flags=""
-g_pos_args=
 
 
 fatal() {
