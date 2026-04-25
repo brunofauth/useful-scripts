@@ -143,6 +143,10 @@ def run_and_log_err(args: Sequence[str], verbose: bool = False) -> None:
         raise
 
 
+def clamp(low: float, high: float, value: float) -> float:
+    return max(min(high, value), low)
+
+
 def main() -> int:
     parser = ap.ArgumentParser(epilog=EPILOGUE)
     parser.add_argument("-v", "--verbose", action="store_true", help="verbosity level", default=0)
@@ -179,7 +183,7 @@ def main() -> int:
         case CliCommands.UPDATE:
             t = tempvar.get(parse_temperature) + args.temperature_delta
             tempvar.set(t)
-            b = round(brightvar.get(parse_brightness) + args.brightness_delta, 2)
+            b = clamp(0, 1, round(brightvar.get(parse_brightness) + args.brightness_delta, 2))
             brightvar.set(b)
             run_and_log_err(["redshift", '-b', f'{b}:{b}', "-PO", str(t)], verbose=args.verbose)
 
