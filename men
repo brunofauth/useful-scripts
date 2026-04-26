@@ -12,8 +12,8 @@ readonly c_section_cache_file="$c_cache_dir/man-sections"
 
 # These count as constants because they're initialized here and never ever changed again.
 c_fzf_bind_commands="ctrl-r:change-preview-window(top,75%|right,50%)"
-c_fzf_bind_commands="$fzf_bind_commands,enter:execute(echo {+} | xargs --max-args 2 man)+clear-selection"
-c_fzf_bind_commands="$fzf_bind_commands,esc:cancel"
+c_fzf_bind_commands="$c_fzf_bind_commands,enter:execute(echo {+} | xargs --max-args 2 man)+clear-selection"
+c_fzf_bind_commands="$c_fzf_bind_commands,esc:cancel"
 
 # These count as constants because they're initialized here and never ever changed again.
 c_fzf_preview_window="right,75%,border-left"
@@ -145,7 +145,7 @@ EOF
             -i -m -e --info=inline \
             --header="Shift + Up/Down to scroll. ESC to quit." --header-first \
             --preview "man '{}'" --preview-window="$fzf_preview_window" \
-            --bind="$fzf_bind_commands" \
+            --bind="$c_fzf_bind_commands" \
             --query="$fzf_initial_query"
 } # }}}
 
