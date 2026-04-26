@@ -1,25 +1,132 @@
 #! /bin/sh
+# vim: foldmethod=marker foldlevel=0
+# shellcheck disable=SC3043
 
 
-fzf_initial_query="!^3 " # Do not show, by default, (C, CPP, etc...) functions
-[ -n "$1" ] && {
-    fzf_initial_query="${fzf_initial_query}$1"
+readonly c_cache_max_age_secs=8424000 # Three months
+readonly c_cache_dir="${XDG_CACHE_HOME:-$HOME/.config}/men"
+readonly c_section_cache_file="$c_cache_dir/man-sections"
+
+
+# Global variables are g_* prefixed
+g_opt_prefix_filter="!^3" # Do not show, by default, (C, CPP, etc...) functions
+g_pos_args=
+
+
+# Usage Message
+# {{{
+USAGE="
+SYNOPSYS
+    ${0##*/} [options] [initial-query]
+
+DESCRIPTION
+    Edit a list of filenames in your \$EDITOR (default=vim) to be moved.
+    If no files are given, use all files present in the current directory.
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits
+
+    -c, --build-section-cache
+        Build a cache file with all the man sections currently
+        available and exit
+
+    -f, --prefix-filter
+        Prefix the query with a string, to, for instance, filter pages you
+        don't want to see by default. (default=$g_opt_prefix_filter)
+    
+NOTE
+    If the names of your files conflict with those of the flags, put them
+    after a double dash (--), like this:
+        ${0##*/} -- --help
+    This will rename a file called '--help', instead of activating the
+    '--help' switch.
+"
+# }}}
+
+
+fatal() {
+    # {{{
+    >&2 echo "$@"
+    exit 1
+} # }}}
+
+
+escape_quotes() {
+    # {{{
+    printf "'%s'" "$(printf '%s' "$1" | sed "s|'|'\\\\''|g")"
+} # }}}
+
+
+parse_cli_args() {
+    # {{{
+    # NOTE: functions like this CAN NOT be called inside subshells $(myfunc)
+    # because they will modify variables that, upon return, will STAY on those
+    # subshells and, thus, the globals defined in the calling instance WILL NOT
+    # be modified (and that's a bug).
+
+    args="$(getopt -o "hcf" -l "help,build-section-cache,prefix-filter" -n "${0##*/}" -- "$@")" \
+        || fatal "Error parsing arguments!"
+    eval set -- "$args"
+
+    while true; do
+        case "$1" in
+            --) shift; break ;;
+            -h|--help)
+                >&2 echo "$USAGE"
+                exit 0
+                ;;
+            -c|--build-section-cache)
+                build_section_cache
+                exit $?
+                ;;
+            -f|--prefix-filter)
+                shift
+                g_opt_prefix_filter="$1"
+                shift
+                ;;
+        esac
+    done
+    g_pos_args="$@" # Return remaining (positional) arguments
+} # }}}
+
+
+build_section_cache() {
+    # {{{
+    mkdir -p "$c_cache_dir" || fatal "could not create cache directory"
+    find /usr/share/man/man* -type f \
+        | grep --only-matching --perl-regexp '(?<=\.)([^.]+)(?=\.gz$)' \
+        | uniq | sort | uniq \
+        > "$c_section_cache_file"
+} # }}}
+
+
+main() {
+    fzf_initial_query="${g_opt_prefix_filter} $1"
+
+    fzf_bind_commands="ctrl-r:change-preview-window(top,75%|right,50%)"
+    fzf_bind_commands="$fzf_bind_commands,enter:execute(echo {+} | xargs --max-args 2 man)+clear-selection"
+    fzf_bind_commands="$fzf_bind_commands,esc:cancel"
+
+    fzf_preview_window="right,75%,border-left"
+    fzf_preview_window="$fzf_preview_window,<100(up,75%,border-bottom)"
+
+    if ! [ -f "$c_section_cache_file" ] \
+        || [ $(expr $(date +%s) - $(stat -c %Y "$c_section_cache_file")) -ge "$c_cache_max_age_secs" ]
+    then
+        build_section_cache || fatal "could not generate section cache"
+    fi
+    padding="$(awk '{ if (length > max) max = length } END { print max }' "$c_section_cache_file")"
+
+    man -k . \
+        | awk -F'[()]' '{ printf "%-'"${padding}"'s %s\n", $2, $1 }' \
+        | fzf \
+            -i -m -e --info=inline \
+            --header="Shift + Up/Down to scroll. ESC to quit." --header-first \
+            --preview "man '{}'" --preview-window="$fzf_preview_window" \
+            --bind="$fzf_bind_commands" \
+            --query="$fzf_initial_query"
 }
 
-FZF_BIND_COMMANDS="\
-ctrl-r:change-preview-window(top,75%|right,50%),\
-enter:execute(echo {+} | xargs --max-args 2 man)+clear-selection,\
-esc:cancel\
-"
 
-fzf_preview_window="right,75%,border-left"
-fzf_preview_window="$fzf_preview_window,<100(up,75%,border-bottom)"
-
-man -k . \
-    | sed 's|\(\S\+\)\s\+(\(\S\+\)).\+|\2\t\t\1|' \
-    | fzf \
-        -i -m -e --info=inline \
-        --header="Shift + Up/Down to scroll. ESC to quit." --header-first \
-        --preview "man '{}'" --preview-window="$fzf_preview_window" \
-        --bind="$FZF_BIND_COMMANDS" \
-        --query="$fzf_initial_query"
+main "$@"

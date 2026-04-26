@@ -39,9 +39,9 @@ OPTIONS
 NOTE
     If the names of your files conflict with those of the flags, put them
     after a double dash (--), like this:
-        ${0##*/} -- --time
-    This will rename a file called '--time', instead of activating the
-    '--time' switch.
+        ${0##*/} -- --help
+    This will rename a file called '--help', instead of activating the
+    '--help' switch.
 "
 # }}}
 
