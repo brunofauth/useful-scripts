@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import argparse as ap
+import dataclasses as dc
 import datetime as dt
+import functools
+import logging
 import os
 import shlex
 import subprocess as sp
-import sys
 
 from enum import StrEnum, auto as enum_auto
 from pathlib import Path
@@ -17,23 +19,229 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from typing import Final
 
+try:
+    import argcomplete
+    install_autocompleter = argcomplete.autocomplete
+except ImportError as e:
+    logging.warning("Optional dependency '%s' not installed. Shell completions will be unavailable", e.name)
+    install_autocompleter = lambda x: x # noqa
 
-STATE_DIR: Final[Path] = Path(os.environ["XDG_RUNTIME_DIR"]) / "redshiftctl"
-TEMPERATURE_STATEFILE_PATH: Final[Path] = STATE_DIR / "temperature"
-BRIGHTNESS_STATEFILE_PATH: Final[Path] = STATE_DIR / "brightness"
 
-DEFAULT_TEMPERATURE_NIGHTTIME: Final[int] = os.environ.get("RSCTL_TEMPERATURE_NIGHT", 2500)
-DEFAULT_TEMPERATURE_DAYTIME: Final[int] = os.environ.get("RSCTL_TEMPERATURE_DAY", 6500)
-
-DEFAULT_BRIGHTNESS_NIGHTTIME: Final[float] = os.environ.get("RSCTL_BRIGHTNESS_NIGHT", 0.5)
-DEFAULT_BRIGHTNESS_DAYTIME: Final[float] = os.environ.get("RSCTL_BRIGHTNESS_DAY", 0.5)
-
-EPILOGUE = (
+CLI_EPILOGUE = (
     "When using this program, a redshift daemon should not be running in the "
     "background because it will try and change parameters set by this script. "
     "If weird behavior starts happening, try and disable redshift.service "
     "and, instead, enable redshiftctl.service"
 )
+
+
+STATE_DIR:                  Final[Path] = Path(os.environ["XDG_RUNTIME_DIR"]) / "redshiftctl"
+TEMPERATURE_STATEFILE_PATH: Final[Path] = STATE_DIR / "temperature"
+BRIGHTNESS_STATEFILE_PATH:  Final[Path] = STATE_DIR / "brightness"
+
+
+type Parser[T] = Callable[[str], T]
+type Validator[T] = Callable[[T], bool]
+type Transformer[T] = Callable[[T], T]
+type Default[T] = Callable[[], T]
+
+
+@dc.dataclass(slots=True, kw_only=True)
+class HintingValidator[T]:
+    validate: Validator[T]
+    hint: str
+
+
+@dc.dataclass(slots=True, kw_only=True)
+class HintingParser[T]:
+    parse: Parser[T]
+    hint: str
+
+
+def load_from_env[T](
+    var_name: str,
+    loader: ValueLoader[T],
+) -> T:
+    """
+    This function attempts to read a value from an env var. It aborts execution
+    if the found value is invalid, assuming that, if you went through the
+    trouble of setting up env vars for this app, you'd rather have it fail if
+    you misconfigured your stuff instead of getting some default behavior.
+    """
+
+    try:
+        loaded_value = loader.parser.parse(os.environ[var_name])
+
+    except KeyError:
+        return loader.default()
+
+    except ValueError as e:
+        logging.error("Bad value type for '%s': '%s'. Hint: '%s'",
+            var_name, type(e.args), loader.parser.hint,
+        )
+        raise SystemExit(1)
+
+    if loader.validator is not None and not loader.validator.validate(loaded_value):
+        logging.error("Bad value for '%s': '%s'. Hint: '%s'",
+            var_name, loaded_value, loader.validator.hint,
+        )
+        raise SystemExit(1)
+
+    _apply = lambda val, func: func(val) # noqa
+    value = functools.reduce(_apply, loader.transformers, loaded_value)
+    return value
+
+
+@dc.dataclass(slots=True, kw_only=True)
+class ValueLoader[T]:
+    """
+    Just a bag of parameters used in many places, grouped so that none of them
+    ever gets forgotten when implementing new functions that operate on values
+    being loaded.
+    """
+
+    parser: HintingParser[T]
+    validator: HintingValidator[T] | None = None
+    transformers: Sequence[Transformer[T]] = ()
+    default: Default[T]
+
+
+class StatefileVariable[T]:
+    """
+    This class attempts to read a value from a file and also writes newly
+    assigned values to it when modified. It falls back to a default() if no
+    file is found or if its contents are invalid.
+    """
+
+    __slots__ = [
+        "_varname",
+        "_path",
+        "_default_cb",
+        "_loader",
+        "_value",
+    ]
+
+    def __init__(
+        self,
+        varname: str,
+        path: str | Path,
+        loader: ValueLoader[T],
+        default_cb: Callable[[], T] | None = None,
+    ) -> None:
+        self._varname = varname
+        self._path = Path(path) if isinstance(path, str) else path
+        self._loader = loader
+        self._default_cb = default_cb
+
+    def get(self) -> T:
+        if hasattr(self, "_value"):
+            return self._value
+
+        try:
+            self._value = self._loader.parser.parse(self._path.read_text())
+
+        except OSError:
+            self._value = self._loader.default()
+            logging.warning(
+                "Could not read value for '%s' from '%s'. Falling back to default: '%s'",
+                self._varname, self._path, self._value,
+            )
+            self._path.write_text(str(self._value))
+            return self._value
+
+        except ValueError as e:
+            self._value = self._loader.default()
+            logging.warning(
+                "Bad value type for '%s': '%s'. Hint: '%s'. Falling back to default: '%s'",
+                self._varname, type(e.args), self._loader.parser.hint, self._value
+            )
+            return self._value
+
+        if self._loader.validator is not None and not self._loader.validator.validate(self._value):
+            default = self._loader.default()
+            logging.warning(
+                "Got an invalid value for '%s': '%s'. Falling back to default: '%s'",
+                self._varname, self._value, default
+            )
+            self._value = default
+            return self._value
+
+        _apply = lambda val, func: func(val) # noqa
+        self._value = functools.reduce(_apply, self._loader.transformers, self._value)
+        return self._value
+
+    def set(self, value: T) -> None:
+        self._value = value
+        self._path.write_text(str(value))
+
+    def clear(self) -> None:
+        self._path.unlink(missing_ok=True)
+        try:
+            del self._value
+        except AttributeError:
+            pass
+
+
+@functools.cache
+def _is_nighttime() -> bool:
+    t = dt.datetime.now().time()
+    return t < dt.time(hour=7) or t >= dt.time(hour=17)
+
+
+# Load temperature {{{
+
+partial_temperature_value_loader = functools.partial(
+    ValueLoader,
+    parser=HintingParser(parse=int, hint="must be an int"),
+    validator=HintingValidator(validate=lambda t: 0 <= t, hint="must not be negative"),
+)
+
+def init_temperature() -> int:
+    if _is_nighttime():
+        varname = "RSCTL_TEMPERATURE_NIGHT"
+        default = lambda: 2500 # noqa
+    else:
+        varname = "RSCTL_TEMPERATURE_DAY"
+        default = lambda: 6500 # noqa
+    return load_from_env(varname, partial_temperature_value_loader(default=default))
+# }}}
+
+
+# Load brightness {{{
+
+partial_brightness_value_loader = functools.partial(ValueLoader,
+    parser=HintingParser(parse=float, hint="must a float"),
+    validator=HintingValidator(validate=lambda b: 0 <= b <= 1, hint="must fit inside [0, 1]"),
+    transformers=[lambda v: round(v, 2)],
+)
+
+def init_brightness() -> float:
+    if _is_nighttime():
+        varname = "RSCTL_BRIGHTNESS_NIGHT"
+        default = lambda: 0.5 # noqa
+    else:
+        varname = "RSCTL_BRIGHTNESS_DAY"
+        default = lambda: 0.5 # noqa
+    return load_from_env(varname, partial_brightness_value_loader(default=default))
+# }}}
+
+
+def set_current_temperature(value: int) -> None:
+    sp.run(["redshift", "-PO", str(value)], check=True)
+    TEMPERATURE_STATEFILE_PATH.write_text(str(value))
+
+
+def run_and_log_err(args: Sequence[str]) -> None:
+    logging.info(shlex.join(args))
+    try:
+        sp.run(args, check=True)
+    except sp.CalledProcessError as error:
+        logging.debug("==> Note: %s", error.stderr)
+        raise
+
+
+def clamp[N: (int, float)](low: N, high: N, value: N) -> N:
+    return max(min(high, value), low)
 
 
 class CliCommands(StrEnum):
@@ -56,100 +264,10 @@ class CliCommands(StrEnum):
                 assert_never(unreachable)
 
 
-def _is_nighttime(t: dt.time) -> bool:
-    return t < dt.time(hour=7) or t >= dt.time(hour=17)
-
-
-class StatefileVariable[T]:
-    def __init__(
-        self,
-        path: str | Path,
-        default_cb: Callable[[], T] | None = None,
-        sanitize_cb: Callable[[T], T] | None = None,
-    ) -> None:
-        self._path = path
-        self._default_cb = default_cb
-        self._sanitize_cb = sanitize_cb
-
-    def get(self, parser: Callable[[str], T]) -> T:
-        if hasattr(self, "_value"):
-            return self._value
-        try:
-            self._value = parser(self._path.read_text())
-            if self._sanitize_cb is not None:
-                self._value = self._sanitize_cb(self._value)
-            return self._value
-        except OSError:
-            if self._default_cb is None:
-                raise
-            self._value = self._default_cb()
-            self._path.write_text(str(self._value))
-            return self._value
-
-    def set(self, value: int) -> None:
-        self._value = value
-        self._path.write_text(str(value))
-
-    def clear(self) -> None:
-        self._path.unlink(missing_ok=True)
-        try:
-            del self._value
-        except AttributeError:
-            pass
-
-
-def init_temperature() -> int:
-    if _is_nighttime(dt.datetime.now().time()):
-        return DEFAULT_TEMPERATURE_NIGHTTIME
-    else:
-        return DEFAULT_TEMPERATURE_DAYTIME
-
-
-def init_brightness() -> float:
-    if _is_nighttime(dt.datetime.now().time()):
-        return DEFAULT_BRIGHTNESS_NIGHTTIME
-    else:
-        return DEFAULT_BRIGHTNESS_DAYTIME
-
-
-def parse_temperature(raw_value: str) -> int:
-    try:
-        return int(raw_value)
-    except ValueError:
-        print("Expected to find an integer inside statefile {TEMPERATURE_STATEFILE_PATH}", file=sys.stderr)
-        raise
-
-
-def parse_brightness(raw_value: str) -> float:
-    try:
-        return float(raw_value)
-    except ValueError:
-        print("Expected to find a float inside statefile {BRIGHTNESS_STATEFILE_PATH}", file=sys.stderr)
-        raise
-
-
-def set_current_temperature(value: int) -> None:
-    sp.run(["redshift", "-PO", str(value)], check=True)
-    TEMPERATURE_STATEFILE_PATH.write_text(str(value))
-
-
-def run_and_log_err(args: Sequence[str], verbose: bool = False) -> None:
-    if verbose:
-        print(shlex.join(args), file=sys.stderr)
-    try:
-        sp.run(args, check=True)
-    except sp.CalledProcessError as error:
-        print("==> Note:", error.stderr, sep="\n", file=sys.stderr)
-        raise
-
-
-def clamp(low: float, high: float, value: float) -> float:
-    return max(min(high, value), low)
-
 
 def main() -> int:
-    parser = ap.ArgumentParser(epilog=EPILOGUE)
-    parser.add_argument("-v", "--verbose", action="store_true", help="verbosity level", default=0)
+    parser = ap.ArgumentParser(epilog=CLI_EPILOGUE)
+    parser.add_argument("-v", "--verbose", action="count", help="verbosity level", default=0)
 
     subparser_maker = parser.add_subparsers(dest='subparser_name')
     subparsers = {cmd: subparser_maker.add_parser(cmd.value, help=cmd.help()) for cmd in CliCommands}
@@ -157,38 +275,45 @@ def main() -> int:
     subparsers[CliCommands.UPDATE].add_argument("-t", "--temperature_delta", type=int, default=0)
     subparsers[CliCommands.UPDATE].add_argument("-b", "--brightness_delta", type=float, default=0)
 
+    install_autocompleter(parser)
     args = parser.parse_args()
 
+    logging.basicConfig(level=[logging.WARNING, logging.INFO, logging.DEBUG][clamp(args.verbose, 0, 2)])
+
     STATE_DIR.mkdir(exist_ok=True, parents=True)
-    tempvar = StatefileVariable(TEMPERATURE_STATEFILE_PATH, default_cb=init_temperature)
-    brightvar = StatefileVariable(BRIGHTNESS_STATEFILE_PATH, default_cb=init_brightness, sanitize_cb=lambda v: round(min(v, 1), 2))
+    tempvar = StatefileVariable("temperature", TEMPERATURE_STATEFILE_PATH,
+        partial_temperature_value_loader(default=init_temperature)
+    )
+    brightvar = StatefileVariable("brightness", BRIGHTNESS_STATEFILE_PATH,
+        partial_brightness_value_loader(default=init_brightness)
+    )
 
     match CliCommands(args.subparser_name):
         case CliCommands.CLEAR.value:
             tempvar.clear()
             brightvar.clear()
-            run_and_log_err(["redshift", "-x"], verbose=args.verbose)
+            run_and_log_err(["redshift", "-x"])
 
         case CliCommands.RESET:
-            t = tempvar.get(parse_temperature)
-            b = brightvar.get(parse_brightness)
-            run_and_log_err(["redshift", '-b', f'{b}:{b}', "-PO", str(t)], verbose=args.verbose)
+            t = tempvar.get()
+            b = brightvar.get()
+            run_and_log_err(["redshift", '-b', f'{b}:{b}', "-PO", str(t)])
 
         case CliCommands.PRINT:
-            t = tempvar.get(parse_temperature)
+            t = tempvar.get()
             print(f"temperature={t}")
-            b = brightvar.get(parse_brightness)
+            b = brightvar.get()
             print(f"brightness={b}")
 
         case CliCommands.UPDATE:
-            t = tempvar.get(parse_temperature) + args.temperature_delta
+            t = tempvar.get() + args.temperature_delta
             tempvar.set(t)
-            b = clamp(0, 1, round(brightvar.get(parse_brightness) + args.brightness_delta, 2))
+            b = clamp(0, 1, round(brightvar.get() + args.brightness_delta, 2))
             brightvar.set(b)
-            run_and_log_err(["redshift", '-b', f'{b}:{b}', "-PO", str(t)], verbose=args.verbose)
+            run_and_log_err(["redshift", '-b', f'{b}:{b}', "-PO", str(t)])
 
         case _ as unreachable:
-            assert_never(unreachable)
+            raise AssertionError(f"Command enum value not handled: {unreachable}")
 
     return 0
 
