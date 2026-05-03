@@ -1,0 +1,173 @@
+#! /bin/sh
+# vim: foldmethod=marker foldlevel=0
+
+
+# Usage Message
+# {{{
+
+readonly USAGE="\
+SYNOPSYS
+    ${0##*/} [options] [optional-query-string]
+
+DESCRIPTION
+    Inspect packages installed in this system interactively, with fzf. Works
+    for both AUR and repo packages.
+
+OPTIONS
+    -h, --help
+        Displays this usage information and exits
+
+    -e, --explicit
+        Show only explicitly installed packages
+
+    -f, --foreign
+        Show only packages not originated from repos (e.g.: from the AUR)
+
+    -v, --verbose
+        Log commands run
+
+NOTE
+    If the your query string conflicts with the name of a flag, put it after a
+    double dash (--), like this:
+        ${0##*/} -- -h
+    This will search for packages with '-h' in their name or description
+    instead of activating the '-h' switch.
+"
+
+# }}}
+
+fatal() {
+    # {{{
+    >&2 echo "$@"
+    exit 1
+} # }}}
+
+
+g_fzf_keybindings=""
+g_fzf_ui_text=""
+g_opt_query_options=""
+g_opt_verbose=0
+g_pos_args=
+
+g_fzf_preview_window="right,60%,border-left"
+g_fzf_preview_window="$g_fzf_preview_window,<100(up,50%,border-bottom)"
+readonly g_fzf_preview_cmd="pacman -Qi {}"
+
+
+add_fzf_binding() {
+    # {{{
+    local key="$1"
+    local action="$2"
+    local description="$3"
+
+    if [ -z "$g_fzf_keybindings" ]
+    then g_fzf_keybindings="$key:$action"
+    else g_fzf_keybindings="$g_fzf_keybindings,$key:$action"
+    fi
+
+    [ -n "$description" ] || return
+
+    if [ -z "$g_fzf_ui_text" ]
+    then g_fzf_ui_text="$key: $description"
+    else g_fzf_ui_text="$(printf '%s\n%s' "$g_fzf_ui_text" "$key: $description")"
+    fi
+} # }}}
+
+
+init_g_fzf_keybindings() {
+    # {{{
+    # This has to be called AFTER cli args are parsed for it depends on option
+    # values set there
+
+    # This declares a function that prints the command to be run before running
+    # it if `$g_opt_verbose` is set to `1`.
+    local cmd_start='f() { [ '"$g_opt_verbose"' -eq 1 ] && >&2 echo "$@"; sh -c "$@"; }; f "'
+    local cmd_end='"'
+
+    g_fzf_preview_dependencies="$cmd_start"'pactree --color {}'"$cmd_end"
+    g_fzf_preview_dependants="$cmd_start"'pactree --reverse --color {}'"$cmd_end"
+    g_fzf_preview_pacman_info="$cmd_start"'pacman --color=always -Qi {}'"$cmd_end"
+
+    add_fzf_binding \
+        "esc" \
+        "cancel" \
+        "erase query or quit"
+
+    add_fzf_binding \
+        "ctrl-down" \
+        "change-preview@$g_fzf_preview_dependencies@" \
+        "see package dependencies"
+
+    add_fzf_binding \
+        "ctrl-up" \
+        "change-preview@$g_fzf_preview_dependants@" \
+        "see package dependants"
+
+    add_fzf_binding \
+        "ctrl-i" \
+        "change-preview@$g_fzf_preview_pacman_info@" \
+        "see package info"
+
+} # }}}
+
+
+parse_cli_args() {
+    # {{{
+    # NOTE: functions like this CAN NOT be called inside subshells $(myfunc)
+    # because they will modify variables that, upon return, will STAY on those
+    # subshells and, thus, the globals defined in the calling instance WILL NOT
+    # be modified (and that's a bug).
+
+    args="$(getopt -o "hefv" -l "help,explicit,foreign,verbose" -n "${0##*/}" -- "$@")" \
+        || fatal "Error parsing arguments!"
+    eval set -- "$args"
+
+    while true; do
+        case "$1" in
+            --) shift; break ;;
+            -h|--help)
+                >&2 echo "$USAGE"
+                exit 0
+                ;;
+            -e|--explicit)
+                g_opt_query_options="$g_opt_query_options --explicit"
+                shift
+                ;;
+            -f|--foreign)
+                g_opt_query_options="$g_opt_query_options --foreign"
+                shift
+                ;;
+            -v|--verbose)
+                g_opt_verbose=1
+                shift
+                ;;
+        esac
+    done
+    g_pos_args="$@" # Return remaining (positional) arguments
+} # }}}
+
+
+main() {
+    # {{{
+
+    parse_cli_args "$@"
+    eval set -- "$g_pos_args"
+
+    # This has to be called AFTER cli args are parsed for it depends on option
+    # values set there
+    init_g_fzf_keybindings
+
+    pacman -Qq $g_opt_query_options  \
+    | fzf \
+        --exact --ignore-case \
+        --ansi \
+        --multi \
+        --footer="$g_fzf_ui_text" --footer-border --footer-label="Key  Bindings" \
+        --preview="$g_fzf_preview_cmd" --preview-window="$g_fzf_preview_window" \
+        --bind="$g_fzf_keybindings" \
+        --ghost="Type the name of a package here" \
+        --query="$*"
+} # }}}
+
+
+main "$@"
