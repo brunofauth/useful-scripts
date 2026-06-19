@@ -1,0 +1,23 @@
+#!/bin/bash
+
+if [[ "$#" -ne 1 ]]; then
+    echo
+    echo 'usage: pw-savewires filename'
+    echo
+    exit 1
+fi
+
+rm -- "$1" &> /dev/null
+
+link_nodeOutput=''
+
+while IFS= read -r line; do
+    if [[ "$line" =~ [|] ]];
+    then
+        link_nodeInput=`echo $line | cut -d ">" -f 2`
+        echo "Saving $link_nodeOutput, ${link_nodeInput//' '}"
+        echo "$link_nodeOutput ${link_nodeInput//' '}" >> "$1"
+    else
+        link_nodeOutput="$line"
+    fi
+done < <(pw-link -lo)

@@ -49,6 +49,7 @@ NOTE
 fatal() {
     # {{{
     >&2 echo "$@"
+    >&2 echo "Run '$0 --help' for usage information"
     exit 1
 } # }}}
 
