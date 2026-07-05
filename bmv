@@ -7,7 +7,6 @@
 g_opt_mode="mv"
 g_opt_log=0
 g_ls_flags=""
-g_pos_args=
 
 
 # Usage Message
@@ -60,12 +59,11 @@ escape_quotes() {
 } # }}}
 
 
-parse_cli_args() {
+main() {
     # {{{
-    # NOTE: functions like this CAN NOT be called inside subshells $(myfunc)
-    # because they will modify variables that, upon return, will STAY on those
-    # subshells and, thus, the globals defined in the calling instance WILL NOT
-    # be modified (and that's a bug).
+
+    # CLI Argument Parsing
+    # {{{
 
     args="$(getopt -o "hm:ldtD" -l "help,mode:,log,dotfiles,time,dirs-first" -n "${0##*/}" -- "$@")" \
         || fatal "Error parsing arguments!"
@@ -104,23 +102,7 @@ parse_cli_args() {
 		;;
         esac
     done
-
-    # Return remaining (positional) arguments and pray that none of them
-    # contains newlines .
-    g_pos_args="$(printf '%s\n' "$@")"
-} # }}}
-
-
-main() {
-    # {{{
-
-    parse_cli_args "$@"
-    set --
-    while IFS= read -r line || [ -n "$line" ]; do
-        set -- "$@" "$line"
-    done <<EOF
-$g_pos_args
-EOF
+    # }}}
 
     src_files="$(mktemp bmv-src.XXXXXXXXXX --tmpdir)"
 
