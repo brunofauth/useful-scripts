@@ -109,14 +109,12 @@ main() {
     # Read names from stdin, each one a line, if anything is piped
     if ! [ -t 0 ]; then
         cat >> "$src_files"
+    elif [ $# -ne 0 ]; then
+        printf "%s\n" "$@" >> "$src_files"
     else
-        if [ $# -eq 0 ]; then
-            # Maybe this 'ls' should be 'find'
-            # shellcheck disable=SC2086
-            ls $g_ls_flags >> "$src_files"
-        else
-            printf "%s\n" "$@" >> "$src_files"
-        fi
+        # Maybe this 'ls' should be 'find'
+        # shellcheck disable=SC2086
+        ls $g_ls_flags >> "$src_files"
     fi
 
     dst_files="$(mktemp bmv-dst.XXXXXXXXXX --tmpdir)"
