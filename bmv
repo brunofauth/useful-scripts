@@ -131,7 +131,7 @@ main() {
     cmd_list="$(mktemp bmv-cmd.XXXXXXXXXX --tmpdir)"
     echo "# The following commands will be executed" >> "$cmd_list"
 
-    while read -ru 3 src_filename && read -ru 4 dst_filename; do
+    while read -r src_filename <&3 && read -r dst_filename <&4; do
         [ "$src_filename" = "$dst_filename" ] && continue
         printf '%s -vi %s %s\n' "$g_opt_mode" "$(escape_quotes "$src_filename")" "$(escape_quotes "$dst_filename")" >> "$cmd_list"
     done 3<"$src_files" 4<"$dst_files"
