@@ -133,6 +133,22 @@ sync_dir() {
     local f_files_in_dst="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
     find "$dst" -maxdepth 1 -type f -printf '%P\n' | sort > "$f_files_in_dst"
 
+    if [ -r "$dst/.idup_ignore" ]; then
+        local f_files_in_dst_after_idup_ignore="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+
+        while IFS= read -r file_in_dst; do
+            local matched=0
+            while IFS= read -r glob_to_ignore; do
+                case $file_in_dst in
+                    $glob_to_ignore) matched=1; break ;;
+                esac
+            done < "$dst/.idup_ignore"
+            [ "$matched" -eq 0 ] && printf '%s\n' "$file_in_dst" >> "$f_files_in_dst_after_idup_ignore"
+        done < "$f_files_in_dst"
+
+        mv "$f_files_in_dst_after_idup_ignore" "$f_files_in_dst"
+    fi
+
     for only_in_src in $(comm -23 "$f_files_in_src" "$f_files_in_dst"); do
         # {{{
         >&2 printf "File %s only exists in SRC (%s)\n" \
