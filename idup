@@ -15,6 +15,20 @@ escape_quotes() {
 } # }}}
 
 
+# <Esc> control sequences
+readonly _cs_begin="$(printf '\033[')" # ESC + [
+readonly _cs_end=m
+readonly _cs_reset=0
+readonly _cs_bold=1
+readonly _cs_yellow=33
+
+
+# (escape_seq: str, words: str)
+_paint_word() {
+    printf "${_cs_begin}%s${_cs_end}%s${_cs_begin}${_cs_reset}${_cs_end}" "$1" "$2"
+}
+
+
 # (msg: str, valid_chars: str, default_val: str)
 _prompt_choice() {
     local msg="$1"
@@ -79,7 +93,7 @@ sync_dir() {
     for only_in_src in $(comm -23 "$f_src_children" "$f_dst_children"); do
         # {{{
         >&2 printf "Subdirectory %s is missing in DST (%s)\n" \
-            "$(escape_quotes "$only_in_src")" \
+            "$(_paint_word "$_cs_bold;$_cs_yellow" "$(escape_quotes "$only_in_src")")" \
             "$(escape_quotes "$dst")"
 
         case "$(prompt_choice "Peek into this directory?" "yn" "n")" in
@@ -100,7 +114,7 @@ sync_dir() {
     for only_in_dst in $(comm -13 "$f_src_children" "$f_dst_children"); do
         # {{{
         >&2 printf "Subdirectory %s is missing in SRC (%s)\n" \
-            "$(escape_quotes "$only_in_dst")" \
+            "$(_paint_word "$_cs_bold;$_cs_yellow" "$(escape_quotes "$only_in_dst")")" \
             "$(escape_quotes "$src")"
 
         case "$(prompt_choice "Peek into this directory?" "yn" "n")" in
@@ -152,7 +166,7 @@ sync_dir() {
     for only_in_src in $(comm -23 "$f_files_in_src" "$f_files_in_dst"); do
         # {{{
         >&2 printf "File %s only exists in SRC (%s)\n" \
-            "$(escape_quotes "$only_in_src")" \
+            "$(_paint_word "$_cs_bold;$_cs_yellow" "$(escape_quotes "$only_in_src")")" \
             "$(escape_quotes "$src")"
 
         case "$(prompt_choice "Peek into the file?" "yn" "n")" in
@@ -173,7 +187,7 @@ sync_dir() {
     for only_in_dst in $(comm -13 "$f_files_in_src" "$f_files_in_dst"); do
         # {{{
         >&2 printf "File %s only exists in DST (%s)\n" \
-            "$(escape_quotes "$only_in_dst")" \
+            "$(_paint_word "$_cs_bold;$_cs_yellow" "$(escape_quotes "$only_in_dst")")" \
             "$(escape_quotes "$dst")"
 
         case "$(prompt_choice "Peek into the file?" "yn" "n")" in
@@ -199,7 +213,7 @@ sync_dir() {
         fi
 
         >&2 printf "Different versions of %s exist in SRC (%s) and DST (%s)\n" \
-            "$(escape_quotes "$common_file")" \
+            "$(_paint_word "$_cs_bold;$_cs_yellow" "$(escape_quotes "$common_file")")" \
             "$(escape_quotes "$src")" \
             "$(escape_quotes "$dst")"
 

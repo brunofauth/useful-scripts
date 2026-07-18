@@ -43,6 +43,8 @@ fatal() {
 } # }}}
 
 
+# All global variables are g_* prefixed and must be "declared"
+# here, so that we can know what is global upfront.
 g_fzf_keybindings=""
 g_fzf_ui_text=""
 g_opt_query_options=""
@@ -51,7 +53,10 @@ g_pos_args=
 
 g_fzf_preview_window="right,60%,border-left"
 g_fzf_preview_window="$g_fzf_preview_window,<100(up,50%,border-bottom)"
-readonly g_fzf_preview_cmd="pacman -Qi {}"
+
+g_fzf_preview_dependencies="echo VARIABLE NOT INITIALIZED at $0"
+g_fzf_preview_dependants="echo VARIABLE NOT INITIALIZED at $0"
+g_fzf_preview_pacman_info="echo VARIABLE NOT INITIALIZED at $0"
 
 
 add_fzf_binding() {
@@ -84,6 +89,7 @@ init_g_fzf_keybindings() {
     local cmd_start='f() { [ '"$g_opt_verbose"' -eq 1 ] && >&2 echo "$@"; sh -c "$@"; }; f "'
     local cmd_end='"'
 
+    # Here we initialize variables first mentioned at the top of this script
     g_fzf_preview_dependencies="$cmd_start"'pactree --color {}'"$cmd_end"
     g_fzf_preview_dependants="$cmd_start"'pactree --reverse --color {}'"$cmd_end"
     g_fzf_preview_pacman_info="$cmd_start"'pacman --color=always -Qi {}'"$cmd_end"
@@ -163,10 +169,11 @@ main() {
         --ansi \
         --multi \
         --footer="$g_fzf_ui_text" --footer-border --footer-label="Key  Bindings" \
-        --preview="$g_fzf_preview_cmd" --preview-window="$g_fzf_preview_window" \
+        --preview="$g_fzf_preview_pacman_info" --preview-window="$g_fzf_preview_window" \
         --bind="$g_fzf_keybindings" \
         --ghost="Type the name of a package here" \
-        --query="$*"
+        --query="$*" \
+        --with-shell="sh -c"
 } # }}}
 
 
