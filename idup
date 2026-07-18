@@ -69,6 +69,7 @@ sync_dir() {
     "
 
     # First we sync the subfolders in these directories
+    # {{{
     local f_src_children="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
     find "$src" -maxdepth 1 -type d -printf '%P\n' | sort > "$f_src_children"
 
@@ -76,42 +77,56 @@ sync_dir() {
     find "$dst" -maxdepth 1 -type d -printf '%P\n' | sort > "$f_dst_children"
 
     for only_in_src in $(comm -23 "$f_src_children" "$f_dst_children"); do
-        >&2 echo "Subdirectory '$only_in_src' is missing in DST ('$dst')"
+        # {{{
+        >&2 printf "Subdirectory %s is missing in DST (%s)\n" \
+            "$(escape_quotes "$only_in_src")" \
+            "$(escape_quotes "$dst")"
+
         case "$(prompt_choice "Peek into this directory?" "yn" "n")" in
             y*) ls "${src:?}/$only_in_src" | "${PAGER:-less}";;
             *) ;;
         esac
-        case "$(prompt_choice "Create/Ignore/Remove" "cir" "i")" in
+
+        case "$(prompt_choice "[C]reate | [I]gnore | [R]emove" "cir" "i")" in
             c*) mkdir "$dst/$only_in_src"; sync_dir "$src/$only_in_src" "$dst/$only_in_src" ;;
             r*) rm -rf "${src:?}/$only_in_src" ;;
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
+
         printf '\n'
-    done
+    done # }}}
 
     for only_in_dst in $(comm -13 "$f_src_children" "$f_dst_children"); do
-        >&2 echo "Subdirectory '$only_in_dst' is missing in SRC ('$src')"
+        # {{{
+        >&2 printf "Subdirectory %s is missing in SRC (%s)\n" \
+            "$(escape_quotes "$only_in_dst")" \
+            "$(escape_quotes "$src")"
+
         case "$(prompt_choice "Peek into this directory?" "yn" "n")" in
             y*) ls "${dst:?}/$only_in_dst" | "${PAGER:-less}";;
             *) ;;
         esac
-        case "$(prompt_choice "Create/Ignore/Remove" "cir" "i")" in
+
+        case "$(prompt_choice "[C]reate | [I]gnore | [R]emove" "cir" "i")" in
             c*) mkdir "${src:?}/$only_in_dst"; sync_dir "$src/$only_in_dst" "$dst/$only_in_dst" ;;
             r*) rm -rf "${dst:?}/$only_in_dst" ;;
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
+
         printf '\n'
-    done
+    done # }}}
 
     for common_dir in $(comm -12 "$f_src_children" "$f_dst_children"); do
         sync_dir "$src/$common_dir" "$dst/$common_dir"
     done
 
     rm "$f_src_children" "$f_dst_children"
+    # }}}
 
     # And then we sync the file contents of the same directories
+    # {{{
     local f_files_in_src="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
     find "$src" -maxdepth 1 -type f -printf '%P\n' | sort > "$f_files_in_src"
 
@@ -119,43 +134,59 @@ sync_dir() {
     find "$dst" -maxdepth 1 -type f -printf '%P\n' | sort > "$f_files_in_dst"
 
     for only_in_src in $(comm -23 "$f_files_in_src" "$f_files_in_dst"); do
-        >&2 echo "File '$only_in_src' only exists in SRC ('$src')"
+        # {{{
+        >&2 printf "File %s only exists in SRC (%s)\n" \
+            "$(escape_quotes "$only_in_src")" \
+            "$(escape_quotes "$src")"
+
         case "$(prompt_choice "Peek into the file?" "yn" "n")" in
             y*) "${PAGER:-less}" "${src:?}/$only_in_src";;
             *) ;;
         esac
-        case "$(prompt_choice "Copy/Ignore/Remove" "cir" "i")" in
+
+        case "$(prompt_choice "[C]opy from repo | [I]gnore | [R]emove from repo" "cir" "i")" in
             c*) cp "${src:?}/$only_in_src" "$dst" ;;
             i*) ;;
             r*) >&2 git rm "${src#$DOTS_CFG_ROOT/}/$only_in_src" ;;
             *) >&2 echo "Got invalid response" ;;
         esac
+
         printf '\n'
-    done
+    done # }}}
 
     for only_in_dst in $(comm -13 "$f_files_in_src" "$f_files_in_dst"); do
-        >&2 echo "File '$only_in_dst' only exists in DST ('$dst')"
+        # {{{
+        >&2 printf "File %s only exists in DST (%s)\n" \
+            "$(escape_quotes "$only_in_dst")" \
+            "$(escape_quotes "$dst")"
+
         case "$(prompt_choice "Peek into the file?" "yn" "n")" in
             y*) "${PAGER:-less}" "${dst:?}/$only_in_dst";;
             *) ;;
         esac
-        case "$(prompt_choice "Copy/Delete/Ignore" "cdi" "i")" in
+
+        case "$(prompt_choice "[C]opy into repo | [D]elete | [I]gnore" "cdi" "i")" in
             c*) cp "$dst/$only_in_dst" "$src"; >&2 git add "$src/$only_in_dst" ;;
             d*) rm "$dst/$only_in_dst";;
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
+
         printf '\n'
-    done
+    done # }}}
 
     for common_file in $(comm -12 "$f_files_in_src" "$f_files_in_dst"); do
+        # {{{
+
         if diff --brief "$src/$common_file" "$dst/$common_file" >/dev/null 2>&1; then
             continue
         fi
+
         >&2 printf "Different versions of %s exist in SRC (%s) and DST (%s)\n" \
             "$(escape_quotes "$common_file")" \
             "$(escape_quotes "$src")" \
             "$(escape_quotes "$dst")"
+
         case "$(prompt_choice "Peek into files? (Remote/Local/Diff/None)" "rldn" "n")" in
             r*) "${PAGER:-less}" "$src/$common_file";;
             l*) "${PAGER:-less}" "$dst/$common_file";;
@@ -170,16 +201,19 @@ sync_dir() {
                 ;;
             *) ;;
         esac
-        case "$(prompt_choice "Restore from repo/Push local to repo/Ignore" "rpi" "i")" in
+
+        case "$(prompt_choice "[R]estore from repo | [P]ush local to repo | [I]gnore" "rpi" "i")" in
             r*) cp "$src/$common_file" "$dst";;
             p*) cp "$dst/$common_file" "$src" && >&2 git add "$src/$common_file" ;;
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
+
         printf '\n'
-    done
+    done # }}}
 
     rm "$f_files_in_src" "$f_files_in_dst"
+    # }}}
 }
 
 
