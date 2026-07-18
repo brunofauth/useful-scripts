@@ -8,7 +8,11 @@ readonly DOTS_CFG_ROOT="${DOTFILES:-$HOME/dots}/home/.config"
 readonly HOME_CFG_ROOT="${XDG_CONFIG_HOME:-$HOME/.config}"
 readonly CR="$(printf '\r')"
 
-export GIT_WORK_TREE="$DOTS_CFG_ROOT"
+
+escape_quotes() {
+    # {{{
+    printf "'%s'" "$(printf '%s' "$1" | sed "s|'|'\\\\''|g")"
+} # }}}
 
 
 # (msg: str, valid_chars: str, default_val: str)
@@ -123,7 +127,7 @@ sync_dir() {
         case "$(prompt_choice "Copy/Ignore/Remove" "cir" "i")" in
             c*) cp "${src:?}/$only_in_src" "$dst" ;;
             i*) ;;
-            r*) >&2 git rm "${src:?}/$only_in_src" ;;
+            r*) >&2 git rm "${src#$DOTS_CFG_ROOT/}/$only_in_src" ;;
             *) >&2 echo "Got invalid response" ;;
         esac
         printf '\n'
@@ -148,7 +152,10 @@ sync_dir() {
         if diff --brief "$src/$common_file" "$dst/$common_file" >/dev/null 2>&1; then
             continue
         fi
-        >&2 echo "Different versions of '$common_file' exist in SRC ('$src') and DST ('$dst')"
+        >&2 printf "Different versions of %s exist in SRC (%s) and DST (%s)\n" \
+            "$(escape_quotes "$common_file")" \
+            "$(escape_quotes "$src")" \
+            "$(escape_quotes "$dst")"
         case "$(prompt_choice "Peek into files? (Remote/Local/Diff/None)" "rldn" "n")" in
             r*) "${PAGER:-less}" "$src/$common_file";;
             l*) "${PAGER:-less}" "$dst/$common_file";;
@@ -163,9 +170,9 @@ sync_dir() {
                 ;;
             *) ;;
         esac
-        case "$(prompt_choice "Restore from SRC/Update SRC/Ignore" "rui" "i")" in
+        case "$(prompt_choice "Restore from repo/Push local to repo/Ignore" "rpi" "i")" in
             r*) cp "$src/$common_file" "$dst";;
-            u*) cp "$dst/$common_file" "$src"; >&2 git add "$src/$common_file" ;;
+            p*) cp "$dst/$common_file" "$src" && >&2 git add "$src/$common_file" ;;
             i*) ;;
             *) >&2 echo "Got invalid response" ;;
         esac
