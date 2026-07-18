@@ -20,7 +20,10 @@ readonly _cs_begin="$(printf '\033[')" # ESC + [
 readonly _cs_end=m
 readonly _cs_reset=0
 readonly _cs_bold=1
+readonly _cs_lime=32
 readonly _cs_yellow=33
+readonly _cs_light_blue=34
+readonly _cs_light_magenta=95
 
 
 # (escape_seq: str, words: str)
@@ -84,10 +87,10 @@ sync_dir() {
 
     # First we sync the subfolders in these directories
     # {{{
-    local f_src_children="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    local f_src_children="$(mktemp "idup.src_subdirs.XXXXXXXXXX" --tmpdir)"
     find "$src" -maxdepth 1 -type d -printf '%P\n' | sort > "$f_src_children"
 
-    local f_dst_children="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    local f_dst_children="$(mktemp "idup.dst_subdirs.XXXXXXXXXX" --tmpdir)"
     find "$dst" -maxdepth 1 -type d -printf '%P\n' | sort > "$f_dst_children"
 
     for only_in_src in $(comm -23 "$f_src_children" "$f_dst_children"); do
@@ -101,7 +104,7 @@ sync_dir() {
             *) ;;
         esac
 
-        case "$(prompt_choice "[C]reate | [I]gnore | [R]emove" "cir" "i")" in
+        case "$(prompt_choice "[I]gnore | [C]reate | [R]emove" "cir" "i")" in
             c*) mkdir "$dst/$only_in_src"; sync_dir "$src/$only_in_src" "$dst/$only_in_src" ;;
             r*) rm -rf "${src:?}/$only_in_src" ;;
             i*) ;;
@@ -122,7 +125,7 @@ sync_dir() {
             *) ;;
         esac
 
-        case "$(prompt_choice "[C]reate | [I]gnore | [R]emove" "cir" "i")" in
+        case "$(prompt_choice "[I]gnore | [C]reate | [R]emove" "cir" "i")" in
             c*) mkdir "${src:?}/$only_in_dst"; sync_dir "$src/$only_in_dst" "$dst/$only_in_dst" ;;
             r*) rm -rf "${dst:?}/$only_in_dst" ;;
             i*) ;;
@@ -141,14 +144,14 @@ sync_dir() {
 
     # And then we sync the file contents of the same directories
     # {{{
-    local f_files_in_src="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    local f_files_in_src="$(mktemp "idup.src_files.XXXXXXXXXX" --tmpdir)"
     find "$src" -maxdepth 1 -type f -printf '%P\n' | sort > "$f_files_in_src"
 
-    local f_files_in_dst="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    local f_files_in_dst="$(mktemp "idup.dst_files.XXXXXXXXXX" --tmpdir)"
     find "$dst" -maxdepth 1 -type f -printf '%P\n' | sort > "$f_files_in_dst"
 
     if [ -r "$dst/.idup_ignore" ]; then
-        local f_files_in_dst_after_idup_ignore="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+        local f_files_in_dst_after_idup_ignore="$(mktemp "idup.ignore.XXXXXXXXXX" --tmpdir)"
 
         while IFS= read -r file_in_dst; do
             local matched=0
@@ -165,7 +168,7 @@ sync_dir() {
 
     for only_in_src in $(comm -23 "$f_files_in_src" "$f_files_in_dst"); do
         # {{{
-        >&2 printf "File %s only exists in SRC (%s)\n" \
+        >&2 printf "File %s exists $(_paint_word "$_cs_light_magenta" "only in SRC") (%s)\n" \
             "$(_paint_word "$_cs_bold;$_cs_yellow" "$(escape_quotes "$only_in_src")")" \
             "$(escape_quotes "$src")"
 
@@ -174,7 +177,7 @@ sync_dir() {
             *) ;;
         esac
 
-        case "$(prompt_choice "[C]opy from repo | [I]gnore | [R]emove from repo" "cir" "i")" in
+        case "$(prompt_choice "[I]gnore | [C]opy from repo | [R]emove from repo" "cir" "i")" in
             c*) cp "${src:?}/$only_in_src" "$dst" ;;
             i*) ;;
             r*) >&2 git rm "${src#$DOTS_CFG_ROOT/}/$only_in_src" ;;
@@ -186,7 +189,7 @@ sync_dir() {
 
     for only_in_dst in $(comm -13 "$f_files_in_src" "$f_files_in_dst"); do
         # {{{
-        >&2 printf "File %s only exists in DST (%s)\n" \
+        >&2 printf "File %s exists $(_paint_word "$_cs_light_blue" "only in DST") (%s)\n" \
             "$(_paint_word "$_cs_bold;$_cs_yellow" "$(escape_quotes "$only_in_dst")")" \
             "$(escape_quotes "$dst")"
 
@@ -195,7 +198,7 @@ sync_dir() {
             *) ;;
         esac
 
-        case "$(prompt_choice "[C]opy into repo | [D]elete | [I]gnore" "cdi" "i")" in
+        case "$(prompt_choice "[I]gnore | [C]opy into repo | [D]elete" "cdi" "i")" in
             c*) cp "$dst/$only_in_dst" "$src"; >&2 git add "$src/$only_in_dst" ;;
             d*) rm "$dst/$only_in_dst";;
             i*) ;;
@@ -212,7 +215,7 @@ sync_dir() {
             continue
         fi
 
-        >&2 printf "Different versions of %s exist in SRC (%s) and DST (%s)\n" \
+        >&2 printf "Different versions of %s $(_paint_word "$_cs_lime" "exist in both") SRC (%s) and DST (%s)\n" \
             "$(_paint_word "$_cs_bold;$_cs_yellow" "$(escape_quotes "$common_file")")" \
             "$(escape_quotes "$src")" \
             "$(escape_quotes "$dst")"
@@ -232,7 +235,7 @@ sync_dir() {
             *) ;;
         esac
 
-        case "$(prompt_choice "[R]estore from repo | [P]ush local to repo | [I]gnore" "rpi" "i")" in
+        case "$(prompt_choice "[I]gnore | [R]estore from repo | [P]ush local to repo" "rpi" "i")" in
             r*) cp "$src/$common_file" "$dst";;
             p*) cp "$dst/$common_file" "$src" && >&2 git add "$src/$common_file" ;;
             i*) ;;
@@ -268,9 +271,9 @@ main_cli() {
 
 
 main_fzf() {
-    local f_src_dirs="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    local f_src_dirs="$(mktemp "idup.src_dirs.XXXXXXXXXX" --tmpdir)"
     find "$DOTS_CFG_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort > "$f_src_dirs"
-    local f_dst_dirs="$(mktemp "cfgdiff.XXXXXXXXXX" --tmpdir)"
+    local f_dst_dirs="$(mktemp "idup.dst_dirs.XXXXXXXXXX" --tmpdir)"
     find "$HOME_CFG_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort > "$f_dst_dirs"
 
     local dirs_to_sync="$(comm -12 "$f_src_dirs" "$f_dst_dirs" | fzf -i -m)"
